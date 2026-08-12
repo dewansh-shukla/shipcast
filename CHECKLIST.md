@@ -21,13 +21,19 @@ Agents branch off this. It has to be green before anyone spawns a session.
 - [x] README with metric-derivation table and privacy schema
 - [x] `npm install` clean, `npm test` green (8), `npm run typecheck` green (3 workspaces), 0 vulnerabilities
 - [x] Base commit pushed to `main`
-- [ ] **BLOCKED** — CI green on `main`
-      GitHub Actions is refusing to start jobs: _"The job was not started because your
-      account is locked due to a billing issue."_ All three jobs fail in 3s with zero
-      steps; the code itself is green locally. Until this clears there are no check runs,
-      which means no `pr_checks` rows, which means **the CI-recovery metric has no data**.
-      Resolve at https://github.com/settings/billing, or fall back to a self-hosted
-      runner (see below).
+- [ ] **BLOCKED (infra, not code)** — CI green on `main`
+      GitHub Actions refuses to start jobs account-wide: _"The job was not started
+      because your account is locked due to a billing issue."_ Two runs, all jobs dead
+      in 3s with zero steps and no logs. Billing UI shows $0 owed, GitHub Free, nothing
+      unpaid; repo Actions are enabled. The lock is account-level and invisible to us.
+- [ ] Support ticket filed at https://support.github.com/contact/billing
+- [ ] **Decision point — tonight.** If support has not cleared it by end of Day 1,
+      switch to the self-hosted runner below. Do not spend Day 2 waiting.
+
+**This does not block building.** The base commit is green locally (8 tests, 3
+workspaces typechecked, format clean), so every build ticket can proceed now. The
+only thing CI gates is Phase 3 data generation — the CI-recovery metric needs real
+check runs to measure. That metric is needed by Day 2 morning, not today.
 
 ### Fallback if billing cannot be cleared
 
