@@ -1,0 +1,365 @@
+/*
+ * TICKET 25 — the claim pages, in the shared system.
+ *
+ * Layout only. Every colour, border, shadow and face comes from the tokens in
+ * `../brutal.css`; there is not a literal colour or font stack in this file, on
+ * purpose. Three sessions are retheming three surfaces from that one stylesheet
+ * right now, and a local hex here is how they end up looking like three sites.
+ *
+ * Scoped under `.claim`, not under `.brutal`. The other surfaces scope their own
+ * layout files under `.brutal` too, and an app-router stylesheet is global the
+ * moment a client navigation happens — a bare `.title` here would land on their
+ * pages. Class names are prefixed for the same reason.
+ *
+ * What these pages are doing shapes the layout: someone ran a command, is half
+ * committed, and is deciding whether to trust us. So the code they are checking
+ * against their terminal is the largest thing on the page, approve is the only
+ * primary control, and what does and does not get sent is stated in full rather
+ * than summarised.
+ */
+
+.claim {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Low specificity so any single-class rule below still wins its own margins. */
+.claim :where(p, h1, h2, ul, li, form) {
+  margin: 0;
+  padding: 0;
+}
+
+.claim :where(ul) {
+  list-style: none;
+}
+
+/* brutal.css rings links and buttons; the code and handle fields need it too. */
+.claim input:focus-visible {
+  outline: 3px solid var(--ember);
+  outline-offset: 3px;
+}
+
+.claim-shell {
+  width: 100%;
+  max-width: 40rem;
+}
+
+/*
+ * The cap carries the one status colour on the page. Phosphor while a decision
+ * is open, signal once it went through, ember when the code is dead — so the
+ * state is legible before any of the words are read.
+ */
+.claim-cap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding: 0.6rem 1rem;
+  border-bottom: var(--edge);
+  background: var(--phosphor);
+}
+
+.claim-cap--good {
+  background: var(--signal);
+}
+
+.claim-cap--stop {
+  background: var(--ember);
+}
+
+.claim-cap-sep {
+  flex: 1;
+  height: 3px;
+  min-width: 1rem;
+  background: var(--ink);
+}
+
+.claim-body {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 3vw, 1.35rem);
+  padding: clamp(1.25rem, 4vw, 2rem);
+}
+
+.claim-title {
+  font-size: clamp(1.6rem, 6vw, 2.5rem);
+}
+
+.claim-lede {
+  max-width: 46ch;
+}
+
+/*
+ * The hero. This is the string being compared against a terminal, character by
+ * character, by someone who is already slightly suspicious — so it is set as
+ * large as the frame allows, with the two groups spaced apart and the separator
+ * dimmed to ash. The text is still exactly what the CLI printed; nothing is
+ * removed for looks.
+ */
+.claim-code {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.15em;
+  padding: clamp(0.75rem, 3vw, 1.25rem) 0.5rem;
+  border: var(--edge);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: clamp(1.75rem, 11vw, 3.25rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-align: center;
+}
+
+.claim-code-group {
+  /* The trailing letter-space would otherwise push the group off centre. */
+  padding-left: 0.16em;
+}
+
+.claim-code-sep {
+  color: var(--ash);
+  padding: 0 0.25em;
+}
+
+.claim-code--empty {
+  color: var(--ash);
+}
+
+/*
+ * Why they are back here after a failed round trip. Ink rather than ash: it is
+ * the reason this page is on screen, not a footnote — and the ember rule ties it
+ * to the cap without adding a second block competing with the button.
+ */
+.claim-note {
+  border-left: 3px solid var(--ember);
+  padding-left: 0.85rem;
+  max-width: 46ch;
+}
+
+.claim-meta {
+  color: var(--ash);
+  font-size: 0.9rem;
+  max-width: 46ch;
+}
+
+.claim-meta strong {
+  color: var(--ink);
+}
+
+/* ── controls ─────────────────────────────────────────────────────────────── */
+
+/*
+ * One primary control per page, and it is always this one. Nothing else on the
+ * page is phosphor and nothing else carries a shadow this size.
+ */
+.claim-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  padding: 0.85rem 1.6rem;
+  border: var(--edge);
+  box-shadow: var(--drop-sm);
+  background: var(--phosphor);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.claim-button:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--drop);
+}
+
+.claim-button:active {
+  transform: translate(3px, 3px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+/* Declining is a real option, not a second call to action. */
+.claim-decline {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--ash);
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.claim-decline:hover {
+  color: var(--ink);
+}
+
+.claim-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.claim-label {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.claim-input {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: var(--edge);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 1.1rem;
+}
+
+.claim-input::placeholder {
+  color: var(--ash);
+}
+
+/* The entry page's one field is the same hero the approval page shows. */
+.claim-input--code {
+  font-size: clamp(1.4rem, 8vw, 2rem);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* Wide enough that the primary button's shadow does not crowd the decline. */
+.claim-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.75rem;
+}
+
+/*
+ * A dead code is routine — they last ten minutes and people are slow. This is
+ * the way out, so it states the command rather than an apology.
+ */
+.claim-retry {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: clamp(0.85rem, 3vw, 1.1rem);
+  border: var(--edge);
+  background: var(--phosphor);
+}
+
+.claim-retry code {
+  font-size: clamp(0.9rem, 4vw, 1.1rem);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.claim-retry-note {
+  font-size: 0.85rem;
+}
+
+/* ── what approving sends ─────────────────────────────────────────────────── */
+
+.claim-terms {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: clamp(1rem, 3vw, 1.25rem);
+  border: var(--edge);
+  background: var(--paper);
+}
+
+.claim-terms-title {
+  font-size: 1.05rem;
+}
+
+.claim-terms-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.claim-term {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+}
+
+/* Both tags are the same size and weight: neither is the fine print. */
+.claim-tag {
+  flex: 0 0 auto;
+  padding: 0.2rem 0.5rem;
+  border: var(--edge-thin);
+}
+
+.claim-tag--sent {
+  background: var(--signal);
+}
+
+.claim-tag--never {
+  background: var(--ember);
+}
+
+.claim-term-text {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.claim-terms-note {
+  padding-top: 0.85rem;
+  border-top: var(--edge-thin);
+  color: var(--ash);
+  font-size: 0.85rem;
+}
+
+.claim-terms-note code {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* ── links ────────────────────────────────────────────────────────────────── */
+
+.claim a:not(.claim-button) {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 3px;
+}
+
+.claim a:not(.claim-button):hover {
+  background: var(--phosphor);
+}
+
+.claim-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+@media (max-width: 30rem) {
+  .claim-button {
+    width: 100%;
+  }
+}
