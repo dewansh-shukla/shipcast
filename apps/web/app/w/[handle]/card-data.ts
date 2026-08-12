@@ -102,15 +102,34 @@ export function formatWindow(window: CardWindow): string {
 }
 
 /**
- * Most merges wins. Ties break on tasks, then harness name, so the award never
- * depends on the order rows came back in.
+ * An award is a comparison, so a category needs a genuine contest to award.
+ *
+ * The OG image used to print "Most Chaotic: claude-code" on a card whose
+ * harness count was 1 — a superlative over a field of one, which is decoration
+ * pretending to be a finding. A judge who spots one stops believing the real
+ * numbers beside it, so the gaps are worth more than the labels.
+ *
+ * The terminal card (`packages/collector/src/render.ts`) already settled this.
+ * The rule is applied again here rather than imported, because the web app does
+ * not depend on the collector; the judgement is what has to match, and the
+ * cases below are the same three it withholds on:
+ *
+ *   - fewer than two eligible harnesses — nothing to compare against
+ *   - the leader ties with the runner-up — no winner, just an order
+ *   - the winning counter is zero — "Firefighter" over a window with no CI
+ *     recoveries names nobody
  */
-export function topAgentByMerges(agents: readonly AgentStats[]): AgentStats | null {
-  const ranked = [...agents].sort(
-    (a, b) => b.merges - a.merges || b.tasks - a.tasks || a.harness.localeCompare(b.harness),
-  );
-  const best = ranked[0];
-  return best && best.merges > 0 ? best : null;
+const MIN_CANDIDATES = 2;
+
+interface Category {
+  title: string;
+  /** Agents this category is willing to judge. */
+  eligible: (agent: AgentStats) => boolean;
+  /** Higher wins. */
+  score: (agent: AgentStats) => number;
+  /** A winner needs a score that means something, not just the top of the pile. */
+  meaningful: (agent: AgentStats) => boolean;
+  detail: (agent: AgentStats, card: ConnectedCard) => string;
 }
 
 /** Interventions and deaths per task. How much hand-holding an agent cost. */
@@ -119,52 +138,155 @@ export function chaosScore(agent: AgentStats): number {
   return (agent.interventions + agent.died) / agent.tasks;
 }
 
-export function mostChaoticAgent(agents: readonly AgentStats[]): AgentStats | null {
+function plural(count: number, singular: string, many = `${singular}s`): string {
+  return `${formatCount(count)} ${count === 1 ? singular : many}`;
+}
+
+const CLOSER: Category = {
+  title: "Closer",
+  eligible: (agent) => agent.tasks > 0,
+  score: (agent) => agent.merges,
+  meaningful: (agent) => agent.merges > 0,
+  detail: (agent, card) =>
+    `${formatCount(agent.merges)} of ${formatCount(card.totals.merges)} merges`,
+};
+
+const MOST_CHAOTIC: Category = {
+  title: "Most chaotic",
+  eligible: (agent) => agent.tasks > 0,
+  score: chaosScore,
+  meaningful: (agent) => agent.interventions + agent.died > 0,
+  /**
+   * Only the halves that actually happened. "0 interventions, 1 dead sessions"
+   * is two mistakes in one line: a count of nothing, and a plural for one.
+   */
+  detail: (agent) =>
+    [
+      agent.interventions > 0 ? plural(agent.interventions, "intervention") : null,
+      agent.died > 0 ? plural(agent.died, "dead session") : null,
+    ]
+      .filter((part): part is string => part !== null)
+      .join(", "),
+};
+
+const FIREFIGHTER: Category = {
+  title: "Firefighter",
+  eligible: (agent) => agent.tasks > 0,
+  score: (agent) => agent.recoveries,
+  meaningful: (agent) => agent.recoveries > 0,
+  detail: (agent) => plural(agent.recoveries, "CI recovery", "CI recoveries"),
+};
+
+/** In the order they read best on the card. */
+const CATEGORIES = [CLOSER, MOST_CHAOTIC, FIREFIGHTER] as const;
+
+/**
+ * The winner of one category, or null when the contest was not real.
+ *
+ * Sorting is fully determined — score, then harness name — so the same counters
+ * always produce the same card whatever order the rows came back in.
+ */
+function winnerOf(category: Category, agents: readonly AgentStats[]): AgentStats | null {
   const ranked = [...agents]
-    .filter((agent) => agent.tasks > 0 && agent.interventions + agent.died > 0)
-    .sort(
-      (a, b) =>
-        chaosScore(b) - chaosScore(a) || b.tasks - a.tasks || a.harness.localeCompare(b.harness),
-    );
-  return ranked[0] ?? null;
+    .filter(category.eligible)
+    .sort((a, b) => category.score(b) - category.score(a) || a.harness.localeCompare(b.harness));
+
+  const [winner, runnerUp] = ranked;
+  if (!winner || ranked.length < MIN_CANDIDATES) return null;
+  if (!category.meaningful(winner)) return null;
+  /**
+   * A tie on the counter the award is named for is not a win. Breaking it on
+   * tasks or on alphabetical order would crown somebody the numbers did not.
+   */
+  if (runnerUp && category.score(runnerUp) === category.score(winner)) return null;
+  return winner;
+}
+
+/** Most merges, against at least one other harness that also ran. */
+export function topAgentByMerges(agents: readonly AgentStats[]): AgentStats | null {
+  return winnerOf(CLOSER, agents);
+}
+
+export function mostChaoticAgent(agents: readonly AgentStats[]): AgentStats | null {
+  return winnerOf(MOST_CHAOTIC, agents);
 }
 
 export function mostRecoveries(agents: readonly AgentStats[]): AgentStats | null {
-  const ranked = [...agents]
-    .filter((agent) => agent.recoveries > 0)
-    .sort((a, b) => b.recoveries - a.recoveries || a.harness.localeCompare(b.harness));
-  return ranked[0] ?? null;
+  return winnerOf(FIREFIGHTER, agents);
 }
 
-/** Awards, in the order they read best on the card. Never longer than three. */
-export function personalitiesFor(card: ConnectedCard): Personality[] {
-  const awards: Personality[] = [];
-  const closer = topAgentByMerges(card.agents);
-  const chaotic = mostChaoticAgent(card.agents);
-  const firefighter = mostRecoveries(card.agents);
+/**
+ * Why a card carries no awards, in the terms of this particular window.
+ *
+ * Withholding without explaining reads as a bug. The wording follows the
+ * terminal card's, because a builder who has seen one should recognise the
+ * other.
+ */
+export function awardsWithheldNote(card: ConnectedCard): string {
+  if (card.agents.length === 0) {
+    return "No agent ran in this window, so no title was earned.";
+  }
+  if (card.agents.length < MIN_CANDIDATES) {
+    return (
+      `An award is a comparison and ${card.agents[0]!.harness} is the only harness here. ` +
+      `Run a second one and these fill in.`
+    );
+  }
+  return "No category had a clear winner — every one tied or had nothing to count.";
+}
 
-  if (closer) {
-    awards.push({
-      award: "Closer",
-      harness: closer.harness,
-      detail: `${formatCount(closer.merges)} of ${formatCount(card.totals.merges)} merges`,
+/**
+ * A category deliberately not awarded.
+ *
+ * It carries the same three fields a real award does so the page renders it as
+ * a row without knowing the difference, and a title no consumer looks up by
+ * name — the OG image asks for "Closer" and "Most chaotic" specifically, so a
+ * withheld category drops off the image entirely rather than printing a row
+ * with nothing in it.
+ */
+export interface WithheldAwards {
+  award: string;
+  harness: string;
+  detail: string;
+  withheld: true;
+}
+
+export type CardAward = Personality | WithheldAwards;
+
+export function isWithheld(award: CardAward): award is WithheldAwards {
+  return "withheld" in award;
+}
+
+/**
+ * Awards, in the order they read best on the card. Never longer than three.
+ *
+ * When no category had a real contest the result is a single withheld row
+ * saying so, rather than an empty list that would read as a rendering bug — or,
+ * worse, a list of superlatives the numbers cannot support.
+ */
+export function personalitiesFor(card: ConnectedCard): CardAward[] {
+  const earned: Personality[] = [];
+
+  for (const category of CATEGORIES) {
+    const winner = winnerOf(category, card.agents);
+    if (!winner) continue;
+    earned.push({
+      award: category.title,
+      harness: winner.harness,
+      detail: category.detail(winner, card),
     });
   }
-  if (chaotic) {
-    awards.push({
-      award: "Most chaotic",
-      harness: chaotic.harness,
-      detail: `${formatCount(chaotic.interventions)} interventions, ${formatCount(chaotic.died)} dead sessions`,
-    });
-  }
-  if (firefighter && firefighter.harness !== closer?.harness) {
-    awards.push({
-      award: "Firefighter",
-      harness: firefighter.harness,
-      detail: `${formatCount(firefighter.recoveries)} CI recoveries`,
-    });
-  }
-  return awards.slice(0, 3);
+
+  if (earned.length > 0) return earned.slice(0, 3);
+
+  return [
+    {
+      award: "No awards yet",
+      harness: "not enough data yet",
+      detail: awardsWithheldNote(card),
+      withheld: true,
+    },
+  ];
 }
 
 export interface GraveyardGroup {
