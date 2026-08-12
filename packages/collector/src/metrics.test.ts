@@ -9,6 +9,7 @@ import {
   OUTCOMES,
   SIZE_BUCKETS,
   type Harness,
+  type IngestPayload,
 } from "@ao-wrapped/shared";
 import { COLLECTOR_VERSION, computeMetrics, type MetricsInput } from "./metrics.ts";
 import type { Transition } from "./replay.ts";
@@ -96,6 +97,14 @@ function stream(): (spec: Spec) => Transition {
       to: spec.to,
     };
   };
+}
+
+/** Adds a per-agent column up, for the invariants the agent rows must hold. */
+function sumAgents(
+  payload: IngestPayload,
+  field: "merges" | "recoveries" | "interventions" | "died" | "tasks",
+): number {
+  return payload.agents.reduce((total, agent) => total + agent[field], 0);
 }
 
 function metrics(transitions: Transition[], overrides: Partial<MetricsInput> = {}) {
@@ -427,6 +436,92 @@ describe("agents", () => {
     expect(payload.agents.find((a) => a.harness === "codex")).toMatchObject({ tasks: 1, died: 1 });
     const died = payload.agents.reduce((total, agent) => total + agent.died, 0);
     expect(died).toBe(payload.outcomes.died);
+  });
+
+  it("counts merged pull requests per agent, not sessions that merged something", () => {
+    // The defect this test exists for: one session shipping three PRs was
+    // reported as one merge in the agent row while the headline counted three,
+    // so the card disagreed with itself in public.
+    const t = stream();
+    const payload = metrics([
+      t({ kind: "pr_state", to: "merged", sessionId: "s1" }),
+      t({ kind: "pr_state", to: "merged", sessionId: "s1" }),
+      t({ kind: "pr_state", to: "merged", sessionId: "s1" }),
+      t({ kind: "pr_state", to: "merged", sessionId: "s2" }),
+    ]);
+
+    expect(payload.totals).toMatchObject({ tasks: 2, merges: 4 });
+    expect(payload.agents[0]).toMatchObject({ harness: "claude-code", tasks: 2, merges: 4 });
+  });
+
+  it("keeps the per-agent merge column summing to totals.merges", () => {
+    const t = stream();
+    const payload = metrics([
+      t({ kind: "pr_state", to: "merged", sessionId: "s1", harness: "claude-code" }),
+      t({ kind: "pr_state", to: "merged", sessionId: "s1", harness: "claude-code" }),
+      t({ kind: "pr_state", to: "opened", sessionId: "s2", harness: "claude-code" }),
+      t({ kind: "pr_state", to: "merged", sessionId: "s3", harness: "codex" }),
+      t({ kind: "pr_state", to: "merged", sessionId: "s3", harness: "codex" }),
+      t({ kind: "pr_state", to: "merged", sessionId: "s4", harness: "codex" }),
+    ]);
+
+    expect(sumAgents(payload, "merges")).toBe(payload.totals.merges);
+    expect(payload.agents.find((a) => a.harness === "claude-code")?.merges).toBe(2);
+    expect(payload.agents.find((a) => a.harness === "codex")?.merges).toBe(3);
+  });
+
+  it("still sums when a merge names no session, rather than dropping it", () => {
+    // `change_log` rows can carry no session id at all. Those merges are real
+    // and counted in the total, so they have to land in a harness row too.
+    const t = stream();
+    const payload = metrics([
+      t({ kind: "pr_state", to: "merged", sessionId: "s1", harness: "claude-code" }),
+      t({ kind: "pr_state", to: "merged", sessionId: null, harness: "unknown" }),
+      t({ kind: "ci_check", to: "failed", sessionId: null, harness: "unknown" }),
+      t({ kind: "ci_check", to: "passed", from: "failed", sessionId: null, harness: "unknown" }),
+    ]);
+
+    expect(payload.totals.merges).toBe(2);
+    expect(sumAgents(payload, "merges")).toBe(2);
+    expect(sumAgents(payload, "recoveries")).toBe(payload.totals.ciRecoveries);
+    // A harness with an unattributed merge and no session of its own is an
+    // honest row, not a hidden one.
+    expect(payload.agents.find((a) => a.harness === "unknown")).toMatchObject({
+      tasks: 0,
+      merges: 1,
+      recoveries: 1,
+    });
+  });
+
+  it("keeps recoveries and interventions summing to their totals too", () => {
+    const t = stream();
+    const payload = metrics([
+      t({ kind: "ci_check", to: "failed", sessionId: "s1" }),
+      t({ kind: "ci_check", to: "passed", from: "failed", sessionId: "s1" }),
+      t({ kind: "activity", to: "blocked", sessionId: "s1" }),
+      t({ kind: "ci_check", to: "failed", sessionId: "s2", harness: "codex" }),
+      t({ kind: "ci_check", to: "passed", from: "failed", sessionId: "s2", harness: "codex" }),
+      t({ kind: "activity", to: "waiting_input", sessionId: "s2", harness: "codex" }),
+      t({ kind: "activity", to: "waiting_input", sessionId: "s2", harness: "codex" }),
+    ]);
+
+    expect(sumAgents(payload, "recoveries")).toBe(payload.totals.ciRecoveries);
+    expect(sumAgents(payload, "interventions")).toBe(payload.totals.interventions);
+  });
+
+  it("counts died as sessions, which is what keeps it level with outcomes", () => {
+    // Deliberately not events: a session has exactly one outcome, so this
+    // column reconciles with the outcome histogram rather than with a total.
+    const t = stream();
+    const payload = metrics([
+      t({ kind: "activity", to: "exited", sessionId: "s1" }),
+      t({ kind: "activity", to: "exited", sessionId: "s2", harness: "codex" }),
+      t({ kind: "pr_state", to: "merged", sessionId: "s3", harness: "codex" }),
+      t({ kind: "pr_state", to: "merged", sessionId: "s3", harness: "codex" }),
+    ]);
+
+    expect(sumAgents(payload, "died")).toBe(payload.outcomes.died);
+    expect(sumAgents(payload, "tasks")).toBe(payload.totals.tasks);
   });
 
   it("reports a median session span in minutes", () => {
