@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import type { AgentStats } from "@ao-wrapped/shared";
 import {
@@ -7,12 +8,14 @@ import {
   formatWindow,
   getWrappedCard,
   graveyardByCause,
-  PALETTE,
+  isWithheld,
   personalitiesFor,
   type ConnectedCard,
   type UnconnectedCard,
   type WrappedCard,
 } from "./card-data.ts";
+import "../../brutal.css";
+import "./card.css";
 
 /**
  * TICKET C2 — the Wrapped card.
@@ -24,6 +27,12 @@ import {
  * A handle nobody has published for gets a locked card with no numbers on it
  * at all. There is nothing to fall back to and inventing one would be a lie —
  * the empty card is the pitch, and the gap is what makes connecting worth it.
+ *
+ * TICKET 24 — moved onto the shared neo-brutalist system. Every colour, border,
+ * shadow and face comes from `brutal.css`; `card.css` carries layout and not one
+ * hex value. The PNG beside this file repeats the same palette as literals,
+ * because satori has no CSS variables — the two have to stay in step by hand,
+ * which is why both name the same tokens in their comments.
  */
 
 function siteUrl(): URL {
@@ -84,20 +93,23 @@ export async function generateMetadata({
 export default async function WrappedPage({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = await params;
   const card = await getWrappedCard(handle);
+  const connected = card.state === "connected";
 
   return (
-    <main className="card">
-      <style>{styles}</style>
+    <main className="brutal">
       <div className="card-shell">
-        <header className="masthead">
-          <p className="eyebrow">
-            <span className="mark">AO Wrapped</span>
-            <span className="rule" aria-hidden="true" />
-            <span>{formatWindow(card.window)}</span>
+        <header className="card-masthead">
+          <p className="card-strip">
+            <span className="card-mark eyebrow">AO Wrapped</span>
+            <span className="card-window">{formatWindow(card.window)}</span>
           </p>
-          <h1 className="handle">{card.handle}</h1>
-          <p className="standing">
-            {card.state === "connected"
+          <h1 className="card-handle">{card.handle}</h1>
+          <p className="card-standing">
+            <span
+              className={connected ? "card-pip card-pip--live" : "card-pip card-pip--empty"}
+              aria-hidden="true"
+            />
+            {connected
               ? "Collector connected · every number below was measured on this machine"
               : "Not on the board yet · only collector-reported work is ranked"}
           </p>
@@ -105,9 +117,9 @@ export default async function WrappedPage({ params }: { params: Promise<{ handle
 
         {card.state === "connected" ? <Connected card={card} /> : <NotConnected card={card} />}
 
-        <footer className="footer">
+        <footer className="card-footer">
           <p>
-            Counters come from a local AO database, read-only. No code, diffs, repo names or prompts
+            Counters come from local AO telemetry, read-only. No code, diffs, repo names or prompts
             ever leave the machine.
           </p>
         </footer>
@@ -124,81 +136,79 @@ function Connected({ card }: { card: ConnectedCard }) {
 
   return (
     <>
-      <section className="hero" aria-label="Totals">
-        <div className="headline">
-          <p className="figure-label">Merges</p>
-          <p className="figure">{formatCount(totals.merges)}</p>
-          <p className="figure-note">
+      <section className="card-hero" aria-label="Totals">
+        <div className="card-figure">
+          <p className="eyebrow">Merges</p>
+          <p className="card-figure-value">{formatCount(totals.merges)}</p>
+          <p className="card-figure-note">
             out of {formatCount(totals.tasks)} tasks your agents were handed
           </p>
         </div>
-        <dl className="satellites">
-          <Satellite label="CI recoveries" value={formatCount(totals.ciRecoveries)} tone="signal" />
-          <Satellite label="Peak parallelism" value={formatCount(totals.peakParallelism)} />
-          <Satellite label="Harnesses" value={formatCount(totals.harnesses)} />
-          <Satellite label="Interventions" value={formatCount(totals.interventions)} tone="ember" />
+        <dl className="card-stats">
+          <Stat label="CI recoveries" value={formatCount(totals.ciRecoveries)} tone="signal" />
+          <Stat label="Peak parallelism" value={formatCount(totals.peakParallelism)} />
+          <Stat label="Harnesses" value={formatCount(totals.harnesses)} />
+          <Stat label="Interventions" value={formatCount(totals.interventions)} tone="ember" />
         </dl>
       </section>
 
-      <section className="panel" aria-labelledby="roster-heading">
-        <h2 id="roster-heading" className="panel-title">
-          The crew
-        </h2>
-        <ul className="legend">
+      <Panel title="The crew" id="roster-heading">
+        <ul className="card-legend">
           <li>
-            <span className="chip chip--merges" aria-hidden="true" />
+            <span className="card-chip card-chip--merges" aria-hidden="true" />
             Merges
           </li>
           <li>
-            <span className="chip chip--recoveries" aria-hidden="true" />
+            <span className="card-chip card-chip--recoveries" aria-hidden="true" />
             CI recoveries
           </li>
           <li>
-            <span className="chip chip--died" aria-hidden="true" />
+            <span className="card-chip card-chip--died" aria-hidden="true" />
             Died without a merge
           </li>
         </ul>
-        <ul className="roster">
+        <ul className="card-roster">
           {card.agents.map((agent) => (
             <RosterRow key={agent.harness} agent={agent} maxTasks={maxTasks(card.agents)} />
           ))}
         </ul>
-      </section>
+      </Panel>
 
       {awards.length > 0 && (
-        <section className="panel" aria-labelledby="awards-heading">
-          <h2 id="awards-heading" className="panel-title">
-            Awards
-          </h2>
-          <ul className="awards">
+        <Panel title="Awards" id="awards-heading">
+          <ul className="card-awards">
             {awards.map((award) => (
-              <li key={award.award} className="award">
-                <p className="award-name">{award.award}</p>
-                <p className="award-holder">{award.harness}</p>
-                <p className="award-detail">{award.detail}</p>
+              <li
+                key={award.award}
+                className={isWithheld(award) ? "card-award card-award--withheld" : "card-award"}
+              >
+                <p className="card-award-name">{award.award}</p>
+                <div className="card-award-body">
+                  <p className="card-award-holder">{award.harness}</p>
+                  <p className="card-award-detail">{award.detail}</p>
+                </div>
               </li>
             ))}
           </ul>
-        </section>
+        </Panel>
       )}
 
-      <section className="panel" aria-labelledby="graveyard-heading">
-        <h2 id="graveyard-heading" className="panel-title">
-          Graveyard
-        </h2>
-        <p className="panel-note">
+      <Panel title="Graveyard" id="graveyard-heading">
+        <p className="card-note">
           {formatCount(deaths)} sessions ended without a merge. None of them cost points — punishing
           failure punishes trying.
         </p>
-        <ul className="graves">
-          {graveyard.map((group) => (
-            <li key={group.cause} className="grave">
-              <span className="grave-count">{formatCount(group.count)}</span>
-              <span className="grave-cause">{deathCauseLabel(group.cause)}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+        {graveyard.length > 0 && (
+          <ul className="card-graves">
+            {graveyard.map((group) => (
+              <li key={group.cause} className="card-grave">
+                <span className="card-grave-count">{formatCount(group.count)}</span>
+                <span className="card-grave-cause">{deathCauseLabel(group.cause)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
     </>
   );
 }
@@ -206,94 +216,97 @@ function Connected({ card }: { card: ConnectedCard }) {
 function NotConnected({ card }: { card: UnconnectedCard }) {
   return (
     <>
-      <section className="hero" aria-label="Totals">
-        <div className="headline">
-          <p className="figure-label">Merges</p>
-          <p className="figure figure--empty" aria-label="No merges recorded yet">
+      <section className="card-hero" aria-label="Totals">
+        <div className="card-figure card-figure--empty">
+          <p className="eyebrow">Merges</p>
+          <p className="card-figure-value" aria-label="No merges recorded yet">
             —
           </p>
-          <p className="figure-note">
+          <p className="card-figure-note">
             nothing has been published for {card.handle} — this card fills in the first time the
             collector runs
           </p>
         </div>
-        <dl className="satellites">
-          <LockedSatellite label="CI recoveries" />
-          <LockedSatellite label="Peak parallelism" />
-          <LockedSatellite label="Harnesses" />
-          <LockedSatellite label="Interventions" />
+        <dl className="card-stats">
+          <LockedStat label="CI recoveries" />
+          <LockedStat label="Peak parallelism" />
+          <LockedStat label="Harnesses" />
+          <LockedStat label="Interventions" />
         </dl>
       </section>
 
-      <section className="panel" aria-labelledby="locked-heading">
-        <h2 id="locked-heading" className="panel-title">
-          The crew
-        </h2>
-        <ul className="roster">
+      <Panel title="The crew" id="locked-heading">
+        <ul className="card-roster">
           {[0, 1, 2, 3].map((row) => (
-            <li key={row} className="roster-row roster-row--locked">
+            <li key={row} className="card-locked-row">
               <Redaction width={`${34 - row * 4}%`} label="Locked agent" />
               <Redaction width={`${52 - row * 6}%`} label="Locked counters" />
             </li>
           ))}
         </ul>
-      </section>
+      </Panel>
 
-      <section className="panel unlock" aria-labelledby="unlock-heading">
-        <h2 id="unlock-heading" className="panel-title">
-          Not on the board yet
-        </h2>
-        <p className="unlock-copy">
-          Only builders who connected the collector are ranked. Nothing here is guessed from public
-          activity: from outside, a merged pull request looks the same whether an agent opened it or
-          a person typed it, so it cannot measure agent work. AO can tell the difference, which is
-          why it is the only source.
-        </p>
-        <p className="unlock-copy">One command puts {card.handle} on the board:</p>
-        <p className="unlock-command">
-          <code>{CONNECT_COMMAND}</code>
-        </p>
-        <p className="unlock-note">
-          Reads <code>~/.ao</code> read-only, prints the whole card offline first, and publishes
-          counters only — no code, diffs, repo names or prompts.
-        </p>
-      </section>
+      <Panel title="Not on the board yet" id="unlock-heading">
+        <div className="card-unlock">
+          <p className="card-copy">
+            Only builders who connected the collector are ranked. Nothing here is guessed from
+            public activity: from outside, a merged pull request looks the same whether an agent
+            opened it or a person typed it, so it cannot measure agent work. AO can tell the
+            difference, which is why it is the only source.
+          </p>
+          <p className="card-copy">One command puts {card.handle} on the board:</p>
+          <p className="card-command">
+            <code>{CONNECT_COMMAND}</code>
+          </p>
+          <p className="card-copy card-award-detail">
+            Reads <code>~/.ao</code> read-only, prints the whole card offline first, and publishes
+            counters only — no code, diffs, repo names or prompts.
+          </p>
+        </div>
+      </Panel>
     </>
   );
 }
 
-function Satellite({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone?: "signal" | "ember";
-}) {
+/** One slab with an ink cap. Every section below the hero is one of these. */
+function Panel({ title, id, children }: { title: string; id: string; children: ReactNode }) {
   return (
-    <div className="satellite">
-      <dt className="satellite-label">{label}</dt>
-      <dd className={tone ? `satellite-value satellite-value--${tone}` : "satellite-value"}>
-        {value}
-      </dd>
+    <section className="card-panel" aria-labelledby={id}>
+      <div className="card-panel-head">
+        <h2 id={id} className="card-panel-title">
+          {title}
+        </h2>
+      </div>
+      <div className="card-panel-body">{children}</div>
+    </section>
+  );
+}
+
+function Stat({ label, value, tone }: { label: string; value: string; tone?: "signal" | "ember" }) {
+  return (
+    <div className={tone ? `card-stat card-stat--${tone}` : "card-stat"}>
+      <dt className="eyebrow">{label}</dt>
+      <dd className="card-stat-value num">{value}</dd>
     </div>
   );
 }
 
-function LockedSatellite({ label }: { label: string }) {
+/**
+ * A metric with no source is an em dash and the reason for it. Printing a zero
+ * would be a measurement nobody took.
+ */
+function LockedStat({ label }: { label: string }) {
   return (
-    <div className="satellite">
-      <dt className="satellite-label">{label}</dt>
-      <dd className="satellite-value">
-        <Redaction width="3.5rem" label={`${label}: locked`} />
-      </dd>
+    <div className="card-stat">
+      <dt className="eyebrow">{label}</dt>
+      <dd className="card-stat-value card-stat-value--none">—</dd>
+      <p className="card-stat-why">not published yet</p>
     </div>
   );
 }
 
 function Redaction({ width, label }: { width: string; label: string }) {
-  return <span className="redaction" style={{ width }} role="img" aria-label={label} />;
+  return <span className="card-redaction" style={{ width }} role="img" aria-label={label} />;
 }
 
 function maxTasks(agents: readonly AgentStats[]): number {
@@ -304,14 +317,14 @@ function RosterRow({ agent, maxTasks: peak }: { agent: AgentStats; maxTasks: num
   const share = (count: number) => `${(count / peak) * 100}%`;
 
   return (
-    <li className="roster-row">
-      <p className="roster-name">{agent.harness}</p>
-      <div className="roster-bar" aria-hidden="true">
-        <span className="bar bar--merges" style={{ width: share(agent.merges) }} />
-        <span className="bar bar--recoveries" style={{ width: share(agent.recoveries) }} />
-        <span className="bar bar--died" style={{ width: share(agent.died) }} />
+    <li className="card-crew">
+      <p className="card-crew-name">{agent.harness}</p>
+      <div className="card-bar" aria-hidden="true">
+        <span className="card-bar-merges" style={{ width: share(agent.merges) }} />
+        <span className="card-bar-recoveries" style={{ width: share(agent.recoveries) }} />
+        <span className="card-bar-died" style={{ width: share(agent.died) }} />
       </div>
-      <dl className="roster-stats">
+      <dl className="card-crew-stats">
         <div>
           <dt>Tasks</dt>
           <dd>{formatCount(agent.tasks)}</dd>
@@ -336,255 +349,3 @@ function RosterRow({ agent, maxTasks: peak }: { agent: AgentStats; maxTasks: num
     </li>
   );
 }
-
-const styles = `
-.card {
-  --ink: ${PALETTE.ink};
-  --slate: ${PALETTE.slate};
-  --edge: ${PALETTE.edge};
-  --bone: ${PALETTE.bone};
-  --ash: ${PALETTE.ash};
-  --phosphor: ${PALETTE.phosphor};
-  --signal: ${PALETTE.signal};
-  --ember: ${PALETTE.ember};
-  --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Mono", Menlo, monospace;
-  --sans: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
-
-  min-height: 100vh;
-  padding: clamp(1.5rem, 4vw, 4rem) clamp(1rem, 4vw, 3rem);
-  background: var(--ink);
-  color: var(--bone);
-  font-family: var(--sans);
-  line-height: 1.5;
-}
-.card *, .card *::before, .card *::after { box-sizing: border-box; }
-.card p, .card h1, .card h2, .card dl, .card dd, .card ul { margin: 0; padding: 0; }
-.card ul { list-style: none; }
-.card code {
-  font-family: var(--mono);
-  color: var(--phosphor);
-}
-.card-shell {
-  max-width: 62rem;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: clamp(1.25rem, 2.5vw, 2rem);
-}
-
-.masthead { display: flex; flex-direction: column; gap: 0.5rem; }
-.eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-family: var(--mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--ash);
-}
-.mark { color: var(--phosphor); }
-.rule { flex: 1; height: 1px; background: var(--edge); }
-.handle {
-  font-family: var(--mono);
-  font-size: clamp(2rem, 7vw, 3.5rem);
-  font-weight: 500;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-  word-break: break-all;
-}
-.standing { color: var(--ash); font-size: 0.9rem; }
-
-.hero {
-  display: flex;
-  flex-wrap: wrap;
-  gap: clamp(1.5rem, 4vw, 3rem);
-  align-items: flex-end;
-  padding: clamp(1.25rem, 3vw, 2rem);
-  border: 1px solid var(--edge);
-  border-radius: 2px;
-  background:
-    radial-gradient(120% 140% at 0% 0%, rgba(255, 180, 84, 0.09), transparent 60%),
-    var(--slate);
-}
-.headline { flex: 1 1 14rem; }
-.figure-label,
-.satellite-label,
-.panel-title {
-  font-family: var(--mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--ash);
-}
-.figure {
-  font-family: var(--mono);
-  font-size: clamp(4rem, 16vw, 7.5rem);
-  font-weight: 500;
-  line-height: 0.9;
-  letter-spacing: -0.05em;
-  color: var(--phosphor);
-  font-variant-numeric: tabular-nums;
-  animation: rise 420ms ease-out both;
-}
-.figure--empty { color: var(--edge); }
-.figure-note { margin-top: 0.75rem; color: var(--ash); font-size: 0.9rem; max-width: 22ch; }
-.satellites {
-  flex: 1 1 18rem;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(7rem, 1fr));
-  gap: 1rem 1.5rem;
-}
-.satellite { display: flex; flex-direction: column; gap: 0.35rem; }
-.satellite-value {
-  font-family: var(--mono);
-  font-size: clamp(1.5rem, 4vw, 2rem);
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  min-height: 1.4rem;
-  display: flex;
-  align-items: center;
-}
-.satellite-value--signal { color: var(--signal); }
-.satellite-value--ember { color: var(--ember); }
-
-.panel {
-  padding: clamp(1.25rem, 3vw, 1.75rem);
-  border: 1px solid var(--edge);
-  border-radius: 2px;
-  background: var(--slate);
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-.panel-note { color: var(--ash); font-size: 0.9rem; max-width: 58ch; }
-
-.legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 1.5rem;
-  font-size: 0.78rem;
-  color: var(--ash);
-}
-.legend li { display: flex; align-items: center; gap: 0.5rem; }
-.chip { display: inline-block; width: 0.75rem; height: 0.45rem; border-radius: 1px; }
-.chip--merges { background: var(--phosphor); }
-.chip--recoveries { background: var(--signal); }
-.chip--died { background: var(--edge); }
-
-.roster { display: flex; flex-direction: column; gap: 1.25rem; }
-.roster-row {
-  display: grid;
-  grid-template-columns: minmax(7rem, 9rem) 1fr;
-  gap: 0.5rem 1rem;
-  align-items: center;
-}
-.roster-name {
-  font-family: var(--mono);
-  font-size: 0.95rem;
-  letter-spacing: -0.01em;
-}
-.roster-bar { display: flex; height: 0.5rem; gap: 2px; }
-.bar { display: block; height: 100%; border-radius: 1px; min-width: 2px; }
-.bar--merges { background: var(--phosphor); }
-.bar--recoveries { background: var(--signal); }
-.bar--died { background: var(--edge); }
-.roster-stats {
-  grid-column: 2;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 1.5rem;
-  font-size: 0.8rem;
-}
-.roster-stats div { display: flex; gap: 0.4rem; align-items: baseline; }
-.roster-stats dt { color: var(--ash); }
-.roster-stats dd { font-family: var(--mono); font-variant-numeric: tabular-nums; }
-
-.awards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
-  gap: 1rem;
-}
-.award {
-  border-left: 2px solid var(--phosphor);
-  padding-left: 0.9rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-.award-name {
-  font-family: var(--mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--phosphor);
-}
-.award-holder { font-family: var(--mono); font-size: 1.15rem; }
-.award-detail { color: var(--ash); font-size: 0.85rem; }
-
-.graves { display: flex; flex-direction: column; gap: 0.5rem; }
-.grave {
-  display: flex;
-  align-items: baseline;
-  gap: 0.9rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--edge);
-}
-.grave:last-child { border-bottom: none; padding-bottom: 0; }
-.grave-count {
-  font-family: var(--mono);
-  font-size: 1.1rem;
-  color: var(--ember);
-  font-variant-numeric: tabular-nums;
-  min-width: 2ch;
-}
-.grave-cause { color: var(--bone); font-size: 0.9rem; }
-
-.redaction {
-  display: inline-block;
-  height: 0.85rem;
-  border-radius: 1px;
-  background: repeating-linear-gradient(
-    -45deg,
-    var(--edge) 0 5px,
-    rgba(36, 45, 58, 0.45) 5px 10px
-  );
-}
-.roster-row--locked {
-  grid-template-columns: minmax(7rem, 9rem) 1fr;
-  align-items: center;
-}
-.roster-row--locked .redaction { height: 0.75rem; }
-
-.unlock { border-color: rgba(255, 180, 84, 0.35); }
-.unlock-copy { max-width: 54ch; }
-.unlock-command {
-  align-self: flex-start;
-  font-size: clamp(1.1rem, 3vw, 1.5rem);
-  padding: 0.75rem 1rem;
-  border: 1px dashed rgba(255, 180, 84, 0.4);
-  border-radius: 2px;
-  background: rgba(255, 180, 84, 0.06);
-}
-.unlock-note { color: var(--ash); font-size: 0.85rem; max-width: 54ch; }
-
-.footer {
-  color: var(--ash);
-  font-size: 0.8rem;
-  max-width: 62ch;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--edge);
-}
-
-@keyframes rise {
-  from { opacity: 0; transform: translateY(0.35rem); }
-  to { opacity: 1; transform: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .figure { animation: none; }
-}
-@media (max-width: 30rem) {
-  .roster-row { grid-template-columns: 1fr; }
-  .roster-stats { grid-column: 1; }
-}
-`;

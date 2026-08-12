@@ -1,0 +1,477 @@
+/*
+ * TICKET 24 — the Wrapped card, in the shared system.
+ *
+ * Layout only. Every colour, border, shadow and face comes from the tokens in
+ * `../../brutal.css`; there is no hex value in this file on purpose, because
+ * three sessions retheming three surfaces from one stylesheet is the only way
+ * the site ends up looking like one site.
+ *
+ * The card is the artifact people share, so it is built as a stack of slabs:
+ * one number that carries the whole point, then the evidence for it. The
+ * suppression states — a withheld award, an em dash where a metric has no
+ * source — get real space rather than being squeezed out, since a card that
+ * admits what it does not know is the reason the rest of it is believable.
+ */
+
+/*
+ * `brutal.css` resets margins on headings only, so the user agent's `p` margin
+ * is still 1em — which on a 9rem figure is 144px of air above and below it, and
+ * was inflating the hero block to twice its content. `:where()` contributes no
+ * specificity, so every rule below still wins without needing `!important`.
+ */
+.card-shell :where(p, ul, ol, dl, dd, dt, figure) {
+  margin: 0;
+  padding: 0;
+}
+
+.card-shell :where(ul, ol) {
+  list-style: none;
+}
+
+.card-shell {
+  max-width: 72rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.25rem, 3vw, 2rem);
+}
+
+/* ── masthead ─────────────────────────────────────────────────────────────── */
+
+.card-masthead {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.card-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  border: var(--edge);
+  box-shadow: var(--drop-sm);
+  background: var(--paper);
+}
+
+.card-mark {
+  padding: 0.5rem 0.9rem;
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.card-window {
+  padding: 0.5rem 0.9rem;
+  border-left: var(--edge);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  align-self: center;
+}
+
+.card-handle {
+  font-size: clamp(2.6rem, 11vw, 5.5rem);
+  word-break: break-word;
+}
+
+.card-standing {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+
+/* A square pip carries the state without a second typeface or an icon set. */
+.card-pip {
+  width: 0.8rem;
+  height: 0.8rem;
+  border: var(--edge-thin);
+  flex: none;
+}
+
+.card-pip--live {
+  background: var(--signal);
+}
+
+.card-pip--empty {
+  background: var(--paper);
+}
+
+/* ── hero ─────────────────────────────────────────────────────────────────── */
+
+/*
+ * `align-items: start`, not `stretch`. Stretched, the two columns inflate each
+ * other — the stat grid's rows grow to the hero's height, the hero grows to the
+ * stat grid's height, and the one number the card exists to show ends up
+ * floating in an empty field.
+ */
+.card-hero {
+  display: grid;
+  grid-template-columns: minmax(16rem, 1fr) minmax(18rem, 1.1fr);
+  gap: clamp(1rem, 2.5vw, 1.5rem);
+  align-items: start;
+}
+
+.card-figure {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: var(--edge);
+  box-shadow: var(--drop);
+  background: var(--phosphor);
+}
+
+/* The empty card gets the paper ground: nothing was measured, so nothing glows. */
+.card-figure--empty {
+  background: var(--paper);
+}
+
+.card-figure-value {
+  font-family: var(--display);
+  font-size: clamp(4.5rem, 17vw, 9rem);
+  line-height: 0.85;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.card-figure-note {
+  margin-top: 1.1rem;
+  max-width: 24ch;
+  font-size: 0.9rem;
+}
+
+.card-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: clamp(0.75rem, 2vw, 1rem);
+}
+
+.card-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.9rem 1rem;
+  border: var(--edge);
+  box-shadow: var(--drop-sm);
+  background: var(--paper);
+}
+
+.card-stat-value {
+  font-family: var(--display);
+  font-size: clamp(1.9rem, 5vw, 2.6rem);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.card-stat--signal .card-stat-value {
+  color: var(--signal);
+  -webkit-text-stroke: 1px var(--ink);
+}
+
+.card-stat--ember .card-stat-value {
+  color: var(--ember);
+  -webkit-text-stroke: 1px var(--ink);
+}
+
+/* An unmeasured metric is a dash and a reason, never a confident zero. */
+.card-stat-value--none {
+  color: var(--ash);
+}
+
+.card-stat-why {
+  font-size: 0.75rem;
+  color: var(--ash);
+}
+
+/* ── panels ───────────────────────────────────────────────────────────────── */
+
+.card-panel {
+  display: flex;
+  flex-direction: column;
+  border: var(--edge);
+  box-shadow: var(--drop);
+  background: var(--paper);
+}
+
+.card-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  border-bottom: var(--edge);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.card-panel-title {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.card-panel-body {
+  padding: clamp(1rem, 2.5vw, 1.4rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.card-note {
+  font-size: 0.9rem;
+  max-width: 62ch;
+}
+
+/* ── crew ─────────────────────────────────────────────────────────────────── */
+
+.card-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.card-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.card-chip {
+  width: 0.9rem;
+  height: 0.9rem;
+  border: var(--edge-thin);
+  flex: none;
+}
+
+.card-chip--merges {
+  background: var(--phosphor);
+}
+
+.card-chip--recoveries {
+  background: var(--signal);
+}
+
+.card-chip--died {
+  background: var(--ink);
+}
+
+.card-roster {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.card-crew {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  border: var(--edge-thin);
+  background: var(--paper);
+}
+
+.card-crew-name {
+  font-family: var(--mono);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* Bars are solid blocks on an ink rule: flat fills, no gradient, no radius. */
+.card-bar {
+  display: flex;
+  height: 0.9rem;
+  gap: 3px;
+  border: var(--edge-thin);
+  padding: 2px;
+}
+
+.card-bar span {
+  display: block;
+  height: 100%;
+}
+
+.card-bar-merges {
+  background: var(--phosphor);
+}
+
+.card-bar-recoveries {
+  background: var(--signal);
+}
+
+.card-bar-died {
+  background: var(--ink);
+}
+
+.card-crew-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 1.4rem;
+  font-size: 0.8rem;
+}
+
+.card-crew-stats > div {
+  display: flex;
+  gap: 0.4rem;
+  align-items: baseline;
+}
+
+.card-crew-stats dt {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+
+.card-crew-stats dd {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* ── awards ───────────────────────────────────────────────────────────────── */
+
+.card-awards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+
+.card-award {
+  display: flex;
+  flex-direction: column;
+  border: var(--edge-thin);
+  background: var(--paper);
+}
+
+.card-award-name {
+  padding: 0.4rem 0.7rem;
+  border-bottom: var(--edge-thin);
+  background: var(--phosphor);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.card-award-body {
+  padding: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.card-award-holder {
+  font-family: var(--mono);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.card-award-detail {
+  font-size: 0.85rem;
+  color: var(--ash);
+}
+
+/*
+ * A withheld award is not a missing one. It keeps the shape of a real card so
+ * the gap reads as a decision, and takes the paper cap so it cannot be mistaken
+ * for a title somebody won.
+ */
+.card-award--withheld .card-award-name {
+  background: var(--paper);
+}
+
+.card-award--withheld .card-award-holder {
+  color: var(--ash);
+}
+
+/* ── graveyard ────────────────────────────────────────────────────────────── */
+
+.card-graves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.card-grave {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.5rem 0.8rem;
+  border: var(--edge-thin);
+}
+
+.card-grave-count {
+  font-family: var(--display);
+  font-size: 1.4rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ember);
+  -webkit-text-stroke: 1px var(--ink);
+}
+
+.card-grave-cause {
+  font-size: 0.85rem;
+}
+
+/* ── the empty card ───────────────────────────────────────────────────────── */
+
+/* Solid ash blocks, not a hatched gradient: the system has no gradients. */
+.card-redaction {
+  display: block;
+  height: 0.9rem;
+  background: var(--ash);
+  border: var(--edge-thin);
+}
+
+.card-locked-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.card-unlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.card-copy {
+  max-width: 62ch;
+}
+
+.card-command {
+  align-self: flex-start;
+  padding: 0.7rem 1rem;
+  border: var(--edge);
+  box-shadow: var(--drop-sm);
+  background: var(--phosphor);
+  font-family: var(--mono);
+  font-size: clamp(1rem, 3vw, 1.3rem);
+  font-weight: 700;
+}
+
+.card-footer {
+  font-size: 0.8rem;
+  color: var(--ash);
+  max-width: 68ch;
+  padding-top: 0.5rem;
+  border-top: var(--edge-thin);
+}
+
+@media (max-width: 54rem) {
+  .card-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
