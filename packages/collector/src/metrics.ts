@@ -22,7 +22,8 @@ import type { Transition } from "./replay.ts";
  *
  * Derivations:
  *   tasks            distinct sessions appearing in the window
- *   merges           pr_state transitions into 'merged'
+ *   merges           pr_state transitions into 'merged', counted as events both
+ *                    in the total and per agent — one session can merge several'
  *   ciRecoveries     a 'failed' ci_check edge followed by a 'passed' one
  *                    (note: pr_checks uses passed/failed while pr.ci_state uses
  *                    passing/failing — mixing the two silently yields zero, so
@@ -116,7 +117,12 @@ interface SessionFacts {
   harness: Harness;
   firstAt: number;
   lastAt: number;
-  merged: boolean;
+  /**
+   * Merged pull requests, not a flag. A session routinely ships several, and
+   * counting it as one is how the per-agent column came to disagree with the
+   * headline total it is the whole of.
+   */
+  merges: number;
   openedPr: boolean;
   exited: boolean;
   sawConflict: boolean;
@@ -141,6 +147,13 @@ export function computeMetrics(input: MetricsInput): IngestPayload {
   const active = new Set<string>();
   /** A failure is pending per CI key until a later `passed` edge clears it. */
   const pendingCiFailure = new Set<string>();
+  /**
+   * Events whose row named no session. They still belong to a harness, and the
+   * per-agent columns have to carry them or they would sum to less than the
+   * totals they are a breakdown of.
+   */
+  const unattributedMerges = new Map<Harness, number>();
+  const unattributedRecoveries = new Map<Harness, number>();
 
   let peakParallelism = 0;
   let merges = 0;
@@ -177,6 +190,7 @@ export function computeMetrics(input: MetricsInput): IngestPayload {
         } else if (transition.to === "passed" && pendingCiFailure.delete(key)) {
           ciRecoveries += 1;
           if (session) session.ciRecoveries += 1;
+          else bump(unattributedRecoveries, transition.harness);
         }
         break;
       }
@@ -185,7 +199,8 @@ export function computeMetrics(input: MetricsInput): IngestPayload {
         if (session) session.openedPr = true;
         if (transition.to === "merged") {
           merges += 1;
-          if (session) session.merged = true;
+          if (session) session.merges += 1;
+          else bump(unattributedMerges, transition.harness);
         }
         break;
       }
@@ -214,7 +229,7 @@ export function computeMetrics(input: MetricsInput): IngestPayload {
 
   const graveyard: GraveyardEntry[] = [];
   for (const session of sessions.values()) {
-    if (session.merged || !session.exited) continue;
+    if (session.merges > 0 || !session.exited) continue;
     graveyard.push({ harness: session.harness, cause: causeOf(session.lastPrTransition) });
   }
 
@@ -244,7 +259,7 @@ export function computeMetrics(input: MetricsInput): IngestPayload {
     // ticket A2's call, not this ticket's. Zeroed until then.
     sizeMix: zeroed(SIZE_BUCKETS),
     topRepoShare: 0,
-    agents: agentStats(sessions, perSessionOutcome),
+    agents: agentStats(sessions, perSessionOutcome, unattributedMerges, unattributedRecoveries),
     graveyard: graveyard.slice(0, MAX_GRAVEYARD),
     observed: observedMetrics(probe),
   };
@@ -274,7 +289,7 @@ function hasRows(probe: SchemaProbe, table: string): boolean {
  * the hardest loop it closed and never for two at once.
  */
 function classify(session: SessionFacts): Outcome {
-  if (session.merged) {
+  if (session.merges > 0) {
     if (session.sawConflict) return "conflict_resolved";
     if (session.ciRecoveries > 0) return "ci_recovered";
     if (session.reviewResolved) return "review_resolved";
@@ -296,22 +311,47 @@ function causeOf(last: Transition | null): DeathCause {
 }
 
 /**
- * Per-harness rollup. `died` counts sessions whose outcome is `died`, so the
- * agent rows and the outcome histogram always reconcile.
+ * Per-harness rollup, and what each column counts.
+ *
+ *   tasks          sessions — the unit a task is handed out in
+ *   merges         merged pull requests, so this column sums to totals.merges
+ *   recoveries     CI recovery events, so this column sums to totals.ciRecoveries
+ *   interventions  intervention events, so this sums to totals.interventions
+ *   died           sessions whose single outcome was `died`
+ *
+ * `died` is the deliberate odd one out: outcomes are one-per-session by design,
+ * so counting sessions there is what keeps the agent rows and the outcome
+ * histogram reconciled. Everything else counts events, because a session
+ * routinely ships several pull requests and recovers CI more than once, and a
+ * breakdown that cannot add up to its own total is worse than no breakdown.
+ *
+ * Events whose row named no session are folded in per harness. They can create
+ * a row with zero tasks — which is honest: the merge happened, and the session
+ * behind it is not in this window's stream.
  */
 function agentStats(
   sessions: Map<string, SessionFacts>,
   perSessionOutcome: Map<string, Outcome>,
+  unattributedMerges: Map<Harness, number>,
+  unattributedRecoveries: Map<Harness, number>,
 ): AgentStats[] {
   const byHarness = new Map<Harness, { rows: SessionFacts[]; died: number }>();
-  for (const [id, session] of sessions) {
-    let bucket = byHarness.get(session.harness);
+  const bucketFor = (harness: Harness) => {
+    let bucket = byHarness.get(harness);
     if (bucket === undefined) {
       bucket = { rows: [], died: 0 };
-      byHarness.set(session.harness, bucket);
+      byHarness.set(harness, bucket);
     }
+    return bucket;
+  };
+
+  for (const [id, session] of sessions) {
+    const bucket = bucketFor(session.harness);
     bucket.rows.push(session);
     if (perSessionOutcome.get(id) === "died") bucket.died += 1;
+  }
+  for (const harness of [...unattributedMerges.keys(), ...unattributedRecoveries.keys()]) {
+    bucketFor(harness);
   }
 
   const stats: AgentStats[] = [];
@@ -319,8 +359,10 @@ function agentStats(
     stats.push({
       harness,
       tasks: clamp(rows.length),
-      merges: clamp(rows.filter((s) => s.merged).length),
-      recoveries: clamp(sum(rows.map((s) => s.ciRecoveries))),
+      merges: clamp(sum(rows.map((s) => s.merges)) + (unattributedMerges.get(harness) ?? 0)),
+      recoveries: clamp(
+        sum(rows.map((s) => s.ciRecoveries)) + (unattributedRecoveries.get(harness) ?? 0),
+      ),
       interventions: clamp(sum(rows.map((s) => s.interventions))),
       died: clamp(died),
       // TODO(A3 follow-up): turns and token counts are not in Transition. The
@@ -352,7 +394,7 @@ function facts(sessions: Map<string, SessionFacts>, transition: Transition): Ses
       harness: transition.harness,
       firstAt: at,
       lastAt: at,
-      merged: false,
+      merges: 0,
       openedPr: false,
       exited: false,
       sawConflict: false,
@@ -381,6 +423,11 @@ function inWindow(transition: Transition, from: Date, to: Date): boolean {
 
 function zeroed<K extends string>(keys: readonly K[]): Record<K, number> {
   return Object.fromEntries(keys.map((key) => [key, 0])) as Record<K, number>;
+}
+
+/** Adds one to a per-harness tally, creating it on first sight. */
+function bump(counts: Map<Harness, number>, harness: Harness): void {
+  counts.set(harness, (counts.get(harness) ?? 0) + 1);
 }
 
 function sum(values: number[]): number {
