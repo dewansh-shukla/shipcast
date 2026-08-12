@@ -1,0 +1,37 @@
+{
+  "data": {
+    "repository": {
+      "nameWithOwner": "Untrivial-ai/agent-orchestrator",
+      "pullRequests": {
+        "pageInfo": { "hasNextPage": true, "endCursor": "Y3Vyc29yOjQ=" },
+        "nodes": [
+          {
+            "number": 99,
+            "mergedAt": "2026-08-05T12:00:00Z",
+            "updatedAt": "2026-08-05T12:30:00Z",
+            "additions": 600,
+            "deletions": 100,
+            "author": { "__typename": "User", "login": "dewansh-shukla" }
+          },
+          {
+            "number": 98,
+            "mergedAt": "2026-08-04T08:00:00Z",
+            "updatedAt": "2026-08-04T08:01:00Z",
+            "additions": 12,
+            "deletions": 12,
+            "author": { "__typename": "Bot", "login": "dependabot" }
+          },
+          {
+            "number": 97,
+            "mergedAt": "2026-07-20T15:00:00Z",
+            "updatedAt": "2026-07-20T15:02:00Z",
+            "additions": 40,
+            "deletions": 5,
+            "author": { "__typename": "User", "login": "octocat" }
+          }
+        ]
+      }
+    },
+    "rateLimit": { "limit": 5000, "cost": 1, "remaining": 4997, "resetAt": "2026-08-12T11:00:00Z" }
+  }
+}

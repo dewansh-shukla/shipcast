@@ -1,0 +1,13 @@
+{
+  "data": {
+    "repository": null,
+    "rateLimit": { "limit": 5000, "cost": 1, "remaining": 4995, "resetAt": "2026-08-12T11:00:00Z" }
+  },
+  "errors": [
+    {
+      "type": "NOT_FOUND",
+      "path": ["repository"],
+      "message": "Could not resolve to a Repository with the name 'Untrivial-ai/definitely-not-a-repo'."
+    }
+  ]
+}
