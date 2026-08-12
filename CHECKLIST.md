@@ -103,10 +103,12 @@ Measured 2026-08-13 against a live AO v0.12.3 install:
 Your own build is the dataset. The probed install had 4 sessions and 0 merges,
 so none of this exists until you make it exist.
 
-- [x] ~~CI failing and being fixed by an agent~~ — **abandoned.** GitHub Actions is
-      billing-locked at the account level and support will not resolve it before the
-      deadline. Ticket 18 makes the card report CI recovery as unmeasured rather than
-      zero, which is the honest outcome. The demo leads on autonomy instead.
+- [ ] CI failing and being fixed by an agent — **feature kept, no data on this machine.**
+      CI recovery stays in the product: it is implemented, tested, and derives from
+      `pr_checks` transitions exactly as documented. GitHub Actions is billing-locked at
+      the account level, so this particular install has no `pr_checks` rows to read.
+      Ticket 18 makes the card say "not measured here" rather than "0". Anyone with
+      working CI gets the metric on day one.
 - [ ] At least one merge conflict resolved by an agent
 - [ ] At least one review round resolved by an agent
 - [ ] 4+ concurrent sessions captured on video
