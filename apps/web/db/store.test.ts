@@ -96,6 +96,44 @@ describe("InMemoryIngestStore", () => {
     expect(store.snapshotsFor(builder.id)).toHaveLength(2);
   });
 
+  it("finds the latest snapshot by handle, case-insensitively", async () => {
+    const store = new InMemoryIngestStore();
+    const builder = store.addBuilder({ handle: "OctoCat" });
+    await store.saveSnapshot(builder.id, payload());
+
+    const found = await store.latestSnapshotForHandle("octocat");
+    expect(found?.builder.id).toBe(builder.id);
+    expect(found?.snapshot.merges).toBe(2);
+    expect(found?.agents).toHaveLength(1);
+  });
+
+  it("returns the newest window, not whichever payload arrived last", async () => {
+    const store = new InMemoryIngestStore();
+    const builder = store.addBuilder({ handle: "octocat" });
+
+    await store.saveSnapshot(builder.id, payload());
+    await store.saveSnapshot(
+      builder.id,
+      payload({
+        window: { from: "2026-07-01", to: "2026-07-31" },
+        totals: { ...payload().totals, merges: 99 },
+      }),
+    );
+
+    const found = await store.latestSnapshotForHandle("octocat");
+    expect(found?.snapshot.windowTo).toBe("2026-08-12");
+    expect(found?.snapshot.merges).toBe(2);
+  });
+
+  it("has nothing for a handle nobody published under", async () => {
+    const store = new InMemoryIngestStore();
+    store.addBuilder({ handle: "octocat" });
+
+    /** A claimed handle that never published is as absent as an unknown one. */
+    await expect(store.latestSnapshotForHandle("octocat")).resolves.toBeNull();
+    await expect(store.latestSnapshotForHandle("nobody")).resolves.toBeNull();
+  });
+
   it("refuses to save against a builder that does not exist", async () => {
     const store = new InMemoryIngestStore();
 

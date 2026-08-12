@@ -1,14 +1,16 @@
 import type { AgentStats, DeathCause, GraveyardEntry, Harness } from "@ao-wrapped/shared";
+import type { AgentStatsRow } from "../../../db/schema.ts";
+import { getIngestStore, type PublishedSnapshot } from "../../../db/store.ts";
 
 /**
- * TICKET C2 — the data the Wrapped card reads.
+ * TICKET 12 — the data the Wrapped card reads.
  *
- * `getWrappedCard` is the only door between the card and storage. It returns
- * fixtures today; B1 owns `apps/web/db` and lands the real query behind this
- * same signature, so nothing in the page or the PNG route changes when it does.
+ * `getWrappedCard` is the only door between the card and storage, and the store
+ * is the only source. A handle appears here because its owner ran the collector
+ * and published; nothing is inferred, seeded or estimated from anywhere else.
  *
- * Everything else here is a pure derivation over counters — awards included.
- * Deterministic, so the page and the image can never disagree.
+ * Everything below the read is a pure derivation over counters — awards
+ * included. Deterministic, so the page and the image can never disagree.
  */
 
 export interface CardWindow {
@@ -44,19 +46,23 @@ export interface ConnectedCard {
 }
 
 /**
- * A builder who appears on the board from public GitHub data alone. Merges are
- * the one number GitHub can prove, so merges are the one number shown.
+ * A handle with no published snapshot. Deliberately not a 404 and deliberately
+ * carrying no counters: the collector is the only way onto the board, so the
+ * most useful — and only honest — thing this page can do is name the handle and
+ * show the command that fills it in.
  */
-export interface SeededCard {
-  state: "seeded";
+export interface UnconnectedCard {
+  state: "not_connected";
   handle: string;
   window: CardWindow;
-  merges: number;
 }
 
-export type WrappedCard = ConnectedCard | SeededCard;
+export type WrappedCard = ConnectedCard | UnconnectedCard;
 
 export const HACKATHON_WINDOW: CardWindow = { from: "2026-07-14", to: "2026-08-12" };
+
+/** The one command that puts a handle on the board. Page and PNG share it. */
+export const CONNECT_COMMAND = "npx ao-wrapped --publish";
 
 /** Card palette. Shared by the page and the PNG so the unfurl matches the link. */
 export const PALETTE = {
@@ -177,123 +183,70 @@ export function graveyardByCause(entries: readonly GraveyardEntry[]): GraveyardG
     .sort((a, b) => b.count - a.count || a.cause.localeCompare(b.cause));
 }
 
-function expandGraveyard(rows: ReadonlyArray<[Harness, DeathCause, number]>): GraveyardEntry[] {
-  return rows.flatMap(([harness, cause, count]) =>
-    Array.from({ length: count }, () => ({ harness, cause })),
-  );
+/** Roster order, so the card never depends on the order rows came back in. */
+function byBusiest(a: AgentStats, b: AgentStats): number {
+  return b.tasks - a.tasks || b.merges - a.merges || a.harness.localeCompare(b.harness);
 }
 
-const CONNECTED_FIXTURE: ConnectedCard = {
-  state: "connected",
-  handle: "dewansh-shukla",
-  window: HACKATHON_WINDOW,
-  totals: {
-    tasks: 128,
-    merges: 61,
-    ciRecoveries: 19,
-    interventions: 23,
-    peakParallelism: 7,
-    harnesses: 4,
-    turns: 1840,
-    repos: 6,
-  },
-  agents: [
-    {
-      harness: "claude-code",
-      tasks: 58,
-      merges: 31,
-      recoveries: 11,
-      interventions: 6,
-      died: 7,
-      turns: 902,
-      medianMinutes: 12.5,
-      inputTokens: 4_812_000,
-      outputTokens: 391_400,
-      cacheReadTokens: 21_640_000,
-    },
-    {
-      harness: "codex",
-      tasks: 34,
-      merges: 16,
-      recoveries: 5,
-      interventions: 4,
-      died: 6,
-      turns: 511,
-      medianMinutes: 9.2,
-      inputTokens: 2_104_000,
-      outputTokens: 188_900,
-      cacheReadTokens: 6_320_000,
-    },
-    {
-      harness: "cursor",
-      tasks: 22,
-      merges: 9,
-      recoveries: 2,
-      interventions: 9,
-      died: 8,
-      turns: 288,
-      medianMinutes: 18.4,
-    },
-    {
-      harness: "copilot",
-      tasks: 14,
-      merges: 5,
-      recoveries: 1,
-      interventions: 4,
-      died: 5,
-      turns: 139,
-      medianMinutes: 6.7,
-    },
-  ],
-  graveyard: expandGraveyard([
-    ["claude-code", "ci_failed", 3],
-    ["claude-code", "merge_conflict", 2],
-    ["claude-code", "no_signal", 2],
-    ["codex", "ci_failed", 2],
-    ["codex", "review_blocked", 2],
-    ["codex", "merge_conflict", 2],
-    ["cursor", "merge_conflict", 4],
-    ["cursor", "ci_failed", 3],
-    ["cursor", "no_signal", 1],
-    ["copilot", "ci_failed", 2],
-    ["copilot", "review_blocked", 2],
-    ["copilot", "no_signal", 1],
-  ]),
-};
+/**
+ * A stored row back to the payload shape. The token columns are nullable
+ * because AO meters only some harnesses; absent stays absent rather than
+ * becoming a zero, which would read as "spent nothing".
+ */
+function toAgentStats(row: AgentStatsRow): AgentStats {
+  const stats: AgentStats = {
+    harness: row.harness,
+    tasks: row.tasks,
+    merges: row.merges,
+    recoveries: row.recoveries,
+    interventions: row.interventions,
+    died: row.died,
+    turns: row.turns,
+    medianMinutes: row.medianMinutes,
+  };
+  if (row.inputTokens !== null) stats.inputTokens = row.inputTokens;
+  if (row.outputTokens !== null) stats.outputTokens = row.outputTokens;
+  if (row.cacheReadTokens !== null) stats.cacheReadTokens = row.cacheReadTokens;
+  return stats;
+}
 
-const SEEDED_FIXTURE: SeededCard = {
-  state: "seeded",
-  handle: "octocat",
-  window: HACKATHON_WINDOW,
-  merges: 34,
-};
-
-const FIXTURES: WrappedCard[] = [CONNECTED_FIXTURE, SEEDED_FIXTURE];
-
-/** Stable per handle, so a demo URL shows the same card every time. */
-function seededMergeCount(handle: string): number {
-  let hash = 7;
-  for (const char of handle) {
-    hash = (hash * 31 + char.codePointAt(0)!) % 100_003;
-  }
-  return 4 + (hash % 45);
+/**
+ * The stored snapshot as the card sees it. The window comes from the payload,
+ * not from `HACKATHON_WINDOW`: the card must state the window it measured.
+ */
+export function toConnectedCard({ builder, snapshot, agents }: PublishedSnapshot): ConnectedCard {
+  return {
+    state: "connected",
+    /** The builder's own casing, not whatever casing the URL used. */
+    handle: builder.handle,
+    window: { from: snapshot.windowFrom, to: snapshot.windowTo },
+    totals: {
+      tasks: snapshot.tasks,
+      merges: snapshot.merges,
+      ciRecoveries: snapshot.ciRecoveries,
+      interventions: snapshot.interventions,
+      peakParallelism: snapshot.peakParallelism,
+      harnesses: snapshot.harnesses,
+      turns: snapshot.turns,
+      repos: snapshot.repos,
+    },
+    agents: agents.map(toAgentStats).sort(byBusiest),
+    graveyard: snapshot.graveyard.map((entry) => ({ ...entry })),
+  };
 }
 
 /**
  * The single read path for the card.
  *
- * Unknown handles fall back to a seeded card rather than a 404: the board is
- * seeded from public GitHub, so a builder who never installed anything still
- * has a page to land on — and that page is the pitch for connecting.
+ * An unknown handle is not an error and never a 404 — it is the page a builder
+ * lands on before they have connected anything, which makes it the best
+ * argument the product gets to make. It shows no counters, because there are
+ * none: GitHub cannot tell an agent's pull request from a person's, so there is
+ * nothing to fall back to.
  */
 export async function getWrappedCard(handle: string): Promise<WrappedCard> {
-  const match = FIXTURES.find((card) => card.handle.toLowerCase() === handle.toLowerCase());
-  if (match) return match;
+  const published = await getIngestStore().latestSnapshotForHandle(handle);
+  if (published) return toConnectedCard(published);
 
-  return {
-    state: "seeded",
-    handle,
-    window: HACKATHON_WINDOW,
-    merges: seededMergeCount(handle.toLowerCase()),
-  };
+  return { state: "not_connected", handle, window: HACKATHON_WINDOW };
 }

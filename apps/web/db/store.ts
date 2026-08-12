@@ -7,7 +7,7 @@ import type { AgentStatsRow, BuilderRow, SnapshotRow } from "./schema.ts";
  * There is no provisioned database yet and no `DATABASE_URL`, so ingest talks
  * to this interface rather than to drizzle directly. The in-memory
  * implementation below is what the tests run against; a Postgres
- * implementation is a follow-up that swaps in behind the same two methods.
+ * implementation is a follow-up that swaps in behind the same three methods.
  *
  * The row types come from `./schema.ts` on purpose: if the payload ever grows a
  * field the tables cannot hold, this file stops compiling.
@@ -18,6 +18,13 @@ export interface StoredSnapshot {
   agents: AgentStatsRow[];
   /** True when this replaced an earlier snapshot for the same builder and window. */
   replaced: boolean;
+}
+
+/** What a published handle resolves to on the read side. */
+export interface PublishedSnapshot {
+  builder: BuilderRow;
+  snapshot: SnapshotRow;
+  agents: AgentStatsRow[];
 }
 
 export interface IngestStore {
@@ -32,6 +39,16 @@ export interface IngestStore {
 
   /** Upsert one window's counters for a builder. Never stores a score. */
   saveSnapshot(builderId: string, payload: IngestPayload): Promise<StoredSnapshot>;
+
+  /**
+   * The snapshot `/w/<handle>` should render, or null when nobody has published
+   * under that handle. Case-insensitive, because `builders.handle` is unique on
+   * `lower(handle)` — at most one builder can ever match.
+   *
+   * Null is not an error condition. A handle with no snapshot is a builder who
+   * has not run the collector, and the card says exactly that.
+   */
+  latestSnapshotForHandle(handle: string): Promise<PublishedSnapshot | null>;
 }
 
 /** Thrown when `saveSnapshot` is handed a builder id that does not exist. */
@@ -44,6 +61,20 @@ export class UnknownBuilderError extends Error {
 
 function windowKey(builderId: string, from: string, to: string): string {
   return `${builderId} ${from} ${to}`;
+}
+
+/**
+ * Newest window first — a builder who backfills an older window later should
+ * not push their current card off the page. Ties break on arrival time and then
+ * on id, so two windows ending on the same day never swap between requests.
+ */
+function byNewestWindow(a: SnapshotRow, b: SnapshotRow): number {
+  return (
+    b.windowTo.localeCompare(a.windowTo) ||
+    b.windowFrom.localeCompare(a.windowFrom) ||
+    b.receivedAt.getTime() - a.receivedAt.getTime() ||
+    b.id.localeCompare(a.id)
+  );
 }
 
 export class InMemoryIngestStore implements IngestStore {
@@ -132,6 +163,19 @@ export class InMemoryIngestStore implements IngestStore {
     this.agents.set(snapshot.id, agents);
 
     return { snapshot, agents, replaced: previous !== undefined };
+  }
+
+  async latestSnapshotForHandle(handle: string): Promise<PublishedSnapshot | null> {
+    const wanted = handle.toLowerCase();
+    const builder = [...this.builders.values()].find((row) => row.handle.toLowerCase() === wanted);
+    if (builder === undefined) return null;
+
+    const [snapshot] = [...this.snapshots.values()]
+      .filter((row) => row.builderId === builder.id)
+      .sort(byNewestWindow);
+    if (snapshot === undefined) return null;
+
+    return { builder, snapshot, agents: this.agents.get(snapshot.id) ?? [] };
   }
 
   /** Read-side helper for tests and, later, for the board's fixtures. */

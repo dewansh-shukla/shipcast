@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { AgentStats } from "@ao-wrapped/shared";
 import {
+  CONNECT_COMMAND,
   deathCauseLabel,
   formatCount,
   formatWindow,
@@ -9,7 +10,7 @@ import {
   PALETTE,
   personalitiesFor,
   type ConnectedCard,
-  type SeededCard,
+  type UnconnectedCard,
   type WrappedCard,
 } from "./card-data.ts";
 
@@ -20,8 +21,9 @@ import {
  * ./card.png is what unfurls on X and LinkedIn; the metadata below is the only
  * thing that makes the share loop start, so it is the acceptance criterion.
  *
- * Seeded builders get a deliberately locked card: merges filled in, everything
- * else redacted. The gap is what makes connecting the collector worth doing.
+ * A handle nobody has published for gets a locked card with no numbers on it
+ * at all. There is nothing to fall back to and inventing one would be a lie —
+ * the empty card is the pitch, and the gap is what makes connecting worth it.
  */
 
 function siteUrl(): URL {
@@ -35,7 +37,7 @@ function summarize(card: WrappedCard): string {
     const { merges, ciRecoveries, peakParallelism, harnesses } = card.totals;
     return `${formatCount(merges)} merges, ${formatCount(ciRecoveries)} CI recoveries, ${peakParallelism} agents at once across ${harnesses} harnesses.`;
   }
-  return `${formatCount(card.merges)} merges on public GitHub. The rest of the card is locked until the collector runs.`;
+  return `${card.handle} is not on the board yet. Only builders who connected the AO collector are ranked — one command puts them here.`;
 }
 
 export async function generateMetadata({
@@ -97,11 +99,11 @@ export default async function WrappedPage({ params }: { params: Promise<{ handle
           <p className="standing">
             {card.state === "connected"
               ? "Collector connected · every number below was measured on this machine"
-              : "Seeded from public GitHub · merges only"}
+              : "Not on the board yet · only collector-reported work is ranked"}
           </p>
         </header>
 
-        {card.state === "connected" ? <Connected card={card} /> : <Seeded card={card} />}
+        {card.state === "connected" ? <Connected card={card} /> : <NotConnected card={card} />}
 
         <footer className="footer">
           <p>
@@ -201,14 +203,19 @@ function Connected({ card }: { card: ConnectedCard }) {
   );
 }
 
-function Seeded({ card }: { card: SeededCard }) {
+function NotConnected({ card }: { card: UnconnectedCard }) {
   return (
     <>
       <section className="hero" aria-label="Totals">
         <div className="headline">
           <p className="figure-label">Merges</p>
-          <p className="figure">{formatCount(card.merges)}</p>
-          <p className="figure-note">counted from public pull requests on GitHub</p>
+          <p className="figure figure--empty" aria-label="No merges recorded yet">
+            —
+          </p>
+          <p className="figure-note">
+            nothing has been published for {card.handle} — this card fills in the first time the
+            collector runs
+          </p>
         </div>
         <dl className="satellites">
           <LockedSatellite label="CI recoveries" />
@@ -234,18 +241,21 @@ function Seeded({ card }: { card: SeededCard }) {
 
       <section className="panel unlock" aria-labelledby="unlock-heading">
         <h2 id="unlock-heading" className="panel-title">
-          Locked
+          Not on the board yet
         </h2>
         <p className="unlock-copy">
-          Awards, per-agent stats and the graveyard are measured on your own machine — GitHub cannot
-          see them. Run the collector and this card fills in.
+          Only builders who connected the collector are ranked. Nothing here is guessed from public
+          activity: from outside, a merged pull request looks the same whether an agent opened it or
+          a person typed it, so it cannot measure agent work. AO can tell the difference, which is
+          why it is the only source.
         </p>
+        <p className="unlock-copy">One command puts {card.handle} on the board:</p>
         <p className="unlock-command">
-          <code>npx ao-wrapped</code>
+          <code>{CONNECT_COMMAND}</code>
         </p>
         <p className="unlock-note">
-          Reads <code>~/.ao</code> read-only, prints the whole card offline, and publishes only if
-          you pass <code>--publish</code>.
+          Reads <code>~/.ao</code> read-only, prints the whole card offline first, and publishes
+          counters only — no code, diffs, repo names or prompts.
         </p>
       </section>
     </>
@@ -417,6 +427,7 @@ const styles = `
   font-variant-numeric: tabular-nums;
   animation: rise 420ms ease-out both;
 }
+.figure--empty { color: var(--edge); }
 .figure-note { margin-top: 0.75rem; color: var(--ash); font-size: 0.9rem; max-width: 22ch; }
 .satellites {
   flex: 1 1 18rem;
