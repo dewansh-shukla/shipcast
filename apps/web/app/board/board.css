@@ -1,0 +1,381 @@
+/*
+ * TICKET 23 — the board, in the shared system.
+ *
+ * Layout only. Every colour, border, shadow and face is a token from
+ * `brutal.css`; nothing here invents one, because three sessions retheming three
+ * surfaces from one file is the only way the site ends up looking like one site.
+ *
+ * A leaderboard is scanned, not read. Rank, handle and merges carry at arm's
+ * length and everything else is supporting detail, which is what the type scale
+ * and the shedding order below encode.
+ *
+ * Scoped under `.board`, which sits alongside `.brutal` on the same element, so
+ * these rules cannot reach the card or the claim pages.
+ */
+
+.board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.board-shell {
+  width: 100%;
+  max-width: 68rem;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.25rem, 3vw, 2rem);
+}
+
+/* ---- Season header ---------------------------------------------------- */
+
+.board .masthead {
+  border: var(--edge);
+  box-shadow: var(--drop);
+  background: var(--paper);
+}
+
+.board .masthead-cap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.board .masthead-body {
+  padding: clamp(1rem, 3vw, 1.75rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.board .season {
+  font-size: clamp(2rem, 9vw, 4rem);
+  word-break: break-word;
+}
+
+/* The reset is the reason to come back, so it is a block and not a footnote. */
+.board .resets {
+  align-self: flex-start;
+  padding: 0.35rem 0.75rem;
+  border: var(--edge-thin);
+  background: var(--phosphor);
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.board .resets--closed {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.board .standing {
+  margin: 0;
+  max-width: 46rem;
+}
+
+.board .seasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+
+.board .seasons a {
+  padding: 0.3rem 0.6rem;
+  border: var(--edge-thin);
+  background: var(--paper);
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.board .seasons a:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* ---- Standings -------------------------------------------------------- */
+
+.board .panel {
+  border: var(--edge);
+  box-shadow: var(--drop);
+  background: var(--paper);
+}
+
+.board .panel-cap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.5rem 1rem;
+  background: var(--phosphor);
+  border-bottom: var(--edge);
+}
+
+.board .panel-note {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+}
+
+.board .table-wrap {
+  overflow-x: auto;
+}
+
+.board table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.board th,
+.board td {
+  padding: 0.7rem 0.75rem;
+  text-align: left;
+  font-weight: 400;
+  border-bottom: var(--edge-thin);
+}
+
+.board thead th {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border-bottom: var(--edge);
+}
+
+.board tbody tr:last-child th,
+.board tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.board .col-num {
+  text-align: right;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.board .col-rank {
+  width: 3.5rem;
+  font-family: var(--mono);
+  font-weight: 700;
+}
+
+.board .col-builder {
+  font-family: var(--mono);
+  font-size: clamp(1rem, 2.5vw, 1.15rem);
+  font-weight: 700;
+}
+
+.board .col-builder a {
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: var(--edge-thin);
+}
+
+.board .col-builder a:hover {
+  background: var(--ink);
+  color: var(--paper);
+  border-bottom-color: var(--paper);
+}
+
+/* Merges is the number the board is about: ink, and larger than its neighbours. */
+.board .col-merges {
+  font-size: clamp(1.1rem, 3vw, 1.5rem);
+  font-weight: 700;
+}
+
+.board .col-saves {
+  color: var(--signal);
+}
+
+/* The number that hurts should look like it hurts. */
+.board .col-nudges {
+  color: var(--ember);
+}
+
+.board .col-fresh {
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+/* ---- Rank 1 ----------------------------------------------------------- */
+
+/*
+ * A phosphor block behind the row, not a trophy. The rank cell inverts to an
+ * ink square so first place is findable at arm's length and in a screen
+ * recording, without a decoration that carries no information.
+ */
+.board .leader {
+  background: var(--phosphor);
+}
+
+.board .leader th,
+.board .leader td {
+  border-bottom: var(--edge);
+}
+
+.board .leader .col-rank {
+  color: var(--paper);
+}
+
+.board .leader .rank-mark {
+  display: inline-block;
+  min-width: 1.9rem;
+  padding: 0.15rem 0.4rem;
+  background: var(--ink);
+  color: var(--paper);
+  text-align: center;
+}
+
+.board .leader .col-saves,
+.board .leader .col-nudges {
+  color: var(--ink);
+}
+
+.board .leader .col-builder a:hover {
+  background: var(--ink);
+  color: var(--phosphor);
+}
+
+/* ---- Legend ----------------------------------------------------------- */
+
+/*
+ * Plain-language labels beat schema vocabulary, and a label is only plain if
+ * the page says what it counts. This is the sentence, not a tooltip.
+ */
+.board .legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.5rem 1.5rem;
+  margin: 0;
+  padding: clamp(0.75rem, 2vw, 1rem);
+  border-top: var(--edge);
+  font-size: 0.85rem;
+}
+
+.board .legend div {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.board .legend dt {
+  font-family: var(--mono);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.board .legend dd {
+  margin: 0;
+  color: var(--ink);
+}
+
+/* ---- Empty season ----------------------------------------------------- */
+
+.board .empty {
+  padding: clamp(1rem, 3vw, 2rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.board .empty-headline {
+  font-size: clamp(1.5rem, 5vw, 2.5rem);
+}
+
+.board .empty-copy {
+  margin: 0;
+  max-width: 42rem;
+}
+
+/* An inline link still has to be ink: the browser default is not a token. */
+.board .empty-copy a {
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: var(--edge-thin);
+  font-weight: 700;
+}
+
+.board .empty-copy a:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.board .empty-command {
+  margin: 0;
+  /* Leaves room for its own shadow, so the block cannot bleed past the slab. */
+  width: calc(100% - 6px);
+  padding: 0.85rem 1rem;
+  border: var(--edge);
+  box-shadow: var(--drop-sm);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: clamp(0.9rem, 2.6vw, 1.15rem);
+  overflow-x: auto;
+}
+
+.board .empty-command code {
+  color: var(--phosphor);
+}
+
+.board .empty-note {
+  margin: 0;
+  max-width: 42rem;
+  font-size: 0.85rem;
+}
+
+/* ---- Footer ----------------------------------------------------------- */
+
+.board .board-footer {
+  max-width: 52rem;
+  font-size: 0.85rem;
+}
+
+.board .board-footer p {
+  margin: 0;
+}
+
+/*
+ * Narrow screens shed columns rather than shrinking type: rank, handle and
+ * merges are the board, freshness is what makes it look alive, and everything
+ * else goes in reverse order of how often it is read. At 360px the four that
+ * survive are still full size.
+ */
+@media (max-width: 60rem) {
+  .board .shed-1 {
+    display: none;
+  }
+}
+
+@media (max-width: 46rem) {
+  .board .shed-2 {
+    display: none;
+  }
+}
+
+@media (max-width: 30rem) {
+  .board .shed-3 {
+    display: none;
+  }
+
+  .board th,
+  .board td {
+    padding: 0.6rem 0.5rem;
+  }
+}
