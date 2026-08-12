@@ -57,7 +57,7 @@ export async function GET(request: Request): Promise<Response> {
   const state = url.searchParams.get("state") ?? "";
   const store = getClaimStore();
 
-  const userCode = state ? store.userCodeForOauthState(state) : null;
+  const userCode = state ? await store.userCodeForOauthState(state) : null;
   const back = (status: string) =>
     Response.redirect(
       userCode
@@ -72,7 +72,7 @@ export async function GET(request: Request): Promise<Response> {
 
   /** GitHub sends `error=access_denied` when the user cancels the consent screen. */
   if (url.searchParams.get("error")) {
-    store.deny(userCode);
+    await store.deny(userCode);
     return back("denied");
   }
 

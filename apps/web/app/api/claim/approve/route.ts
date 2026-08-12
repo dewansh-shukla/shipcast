@@ -65,7 +65,7 @@ export async function POST(request: Request): Promise<Response> {
   const store = getClaimStore();
 
   if (fields.intent === "deny") {
-    const denied = store.deny(userCode);
+    const denied = await store.deny(userCode);
     return back(denied.ok ? "denied" : denied.status);
   }
 

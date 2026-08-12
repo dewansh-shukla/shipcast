@@ -61,12 +61,12 @@ export async function POST(request: Request): Promise<Response> {
   const input = body as Record<string, unknown>;
   const action = input.action ?? "start";
 
-  if (action === "start") return start(request, input);
-  if (action === "poll") return poll(input);
+  if (action === "start") return await start(request, input);
+  if (action === "poll") return await poll(input);
   return badRequest(`unknown action: ${String(action)}`);
 }
 
-function start(request: Request, input: Record<string, unknown>): Response {
+async function start(request: Request, input: Record<string, unknown>): Promise<Response> {
   /**
    * With no GitHub app configured and no local fallback there is no way to
    * approve a code, so handing one out would send the user to a dead page.
@@ -82,7 +82,7 @@ function start(request: Request, input: Record<string, unknown>): Response {
   }
 
   const hint = typeof input.handle === "string" ? input.handle : null;
-  const started = getClaimStore().start(hint);
+  const started = await getClaimStore().start(hint);
   const origin = siteOrigin(request);
 
   return Response.json(
@@ -97,13 +97,13 @@ function start(request: Request, input: Record<string, unknown>): Response {
   );
 }
 
-function poll(input: Record<string, unknown>): Response {
+async function poll(input: Record<string, unknown>): Promise<Response> {
   const deviceCode = typeof input.deviceCode === "string" ? input.deviceCode.trim() : "";
   if (!deviceCode) return badRequest("deviceCode is required to poll");
 
   let result;
   try {
-    result = getClaimStore().poll(deviceCode);
+    result = await getClaimStore().poll(deviceCode);
   } catch (error) {
     if (error instanceof ClaimUnavailableError) {
       return Response.json({ error: "claim unavailable", reason: error.message }, { status: 503 });

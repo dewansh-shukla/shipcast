@@ -29,7 +29,7 @@ export async function GET(request: Request): Promise<Response> {
 
   if (!isGithubConfigured()) return back("unconfigured");
 
-  const begun = getClaimStore().beginOauth(userCode);
+  const begun = await getClaimStore().beginOauth(userCode);
   if ("error" in begun) return back(begun.error);
 
   const authorize = new URL(GITHUB_AUTHORIZE_URL);

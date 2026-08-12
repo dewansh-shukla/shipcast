@@ -239,7 +239,7 @@ describe("GitHub sign-in", () => {
     expect(callback.headers.get("location")).toBe(
       `${ORIGIN}/claim/${started.userCode}?status=denied`,
     );
-    expect(getClaimStore().lookup(started.userCode)?.status).toBe("denied");
+    expect((await getClaimStore().lookup(started.userCode))?.status).toBe("denied");
   });
 
   it("ignores a callback carrying a state it never issued", async () => {
@@ -250,7 +250,7 @@ describe("GitHub sign-in", () => {
     );
 
     expect(callback.headers.get("location")).toBe(`${ORIGIN}/claim?status=badstate`);
-    expect(getClaimStore().lookup(started.userCode)?.status).toBe("pending");
+    expect((await getClaimStore().lookup(started.userCode))?.status).toBe("pending");
   });
 
   it("leaves the code pending when GitHub will not identify the user", async () => {
@@ -268,7 +268,7 @@ describe("GitHub sign-in", () => {
     expect(callback.headers.get("location")).toBe(
       `${ORIGIN}/claim/${started.userCode}?status=error`,
     );
-    expect(getClaimStore().lookup(started.userCode)?.status).toBe("pending");
+    expect((await getClaimStore().lookup(started.userCode))?.status).toBe("pending");
   });
 
   it("sends an expired code back to its page rather than to GitHub", async () => {
