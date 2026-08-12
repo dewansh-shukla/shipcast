@@ -19,3 +19,4 @@ next-env.d.ts
 apps/web/AGENTS.md
 apps/web/CLAUDE.md
 .playwright-mcp/
+packages/collector/dist/

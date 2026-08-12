@@ -1,16 +1,39 @@
 {
-  "name": "@ao-wrapped/collector",
+  "name": "ao-wrapped",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "bin": {
-    "ao-wrapped": "./src/index.ts"
+    "ao-wrapped": "./dist/ao-wrapped.js"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "dev": "node --experimental-strip-types src/index.ts"
+    "dev": "node --experimental-strip-types src/index.ts",
+    "build": "node build.mjs",
+    "prepublishOnly": "npm run build"
   },
-  "dependencies": {
-    "@ao-wrapped/shared": "*"
+  "description": "Spotify Wrapped for your AI coding workforce, read from Agent Orchestrator's own database.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dewansh-shukla/shipcast.git",
+    "directory": "packages/collector"
+  },
+  "homepage": "https://ao-wrapped.vercel.app",
+  "keywords": [
+    "agent-orchestrator",
+    "ai-agents",
+    "cli",
+    "wrapped",
+    "leaderboard"
+  ],
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.5"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
   }
 }
