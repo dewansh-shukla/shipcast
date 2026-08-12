@@ -5,6 +5,7 @@ import {
   DEATH_CAUSES,
   HARNESSES,
   IngestPayloadSchema,
+  OBSERVABLE_METRICS,
   OUTCOMES,
   SIZE_BUCKETS,
   type Harness,
@@ -68,6 +69,7 @@ const PAYLOAD_KEYS = [
   "cacheReadTokens",
   "graveyard",
   "cause",
+  "observed",
 ];
 
 interface Spec {
@@ -459,6 +461,150 @@ describe("deferred fields", () => {
   });
 });
 
+/** A probe whose named tables hold that many rows. Any other table is absent. */
+function probeWith(rows: Record<string, number>): MetricsInput["probe"] {
+  return {
+    ...PROBE,
+    tables: new Map(
+      Object.entries(rows).map(([name, rowCount]) => [name, { name, columns: [], rowCount }]),
+    ),
+  };
+}
+
+describe("observed", () => {
+  const CI_STREAM: Spec[] = [
+    { kind: "ci_check", to: "failed" },
+    { kind: "ci_check", to: "passed" },
+  ];
+
+  it("does not claim a zero for CI recovery when no CI ever ran", () => {
+    // The real case: Actions is billing-locked on this account, so pr_checks
+    // exists and is empty. 0 recoveries here is an empty table, not an agent.
+    const payload = metrics([], {
+      probe: probeWith({ sessions: 4, pr: 2, change_log: 900, pr_checks: 0 }),
+    });
+
+    expect(payload.observed).not.toContain("ciRecoveries");
+    expect(payload.totals.ciRecoveries).toBe(0);
+  });
+
+  it("still reports a true zero when CI ran and nothing needed recovering", () => {
+    const payload = metrics([], {
+      probe: probeWith({ sessions: 4, pr: 2, change_log: 900, pr_checks: 31 }),
+    });
+
+    expect(payload.observed).toContain("ciRecoveries");
+    expect(payload.totals.ciRecoveries).toBe(0);
+  });
+
+  it("counts recoveries and reports them observed when the source has rows", () => {
+    const t = stream();
+    const payload = metrics(CI_STREAM.map(t), {
+      probe: probeWith({ sessions: 1, pr: 1, change_log: 12, pr_checks: 4 }),
+    });
+
+    expect(payload.totals.ciRecoveries).toBe(1);
+    expect(payload.observed).toContain("ciRecoveries");
+  });
+
+  it("treats a present but empty table as no source at all", () => {
+    const payload = metrics([], {
+      probe: probeWith({ sessions: 0, pr: 0, change_log: 0, pr_checks: 0 }),
+    });
+
+    expect(payload.observed).toEqual([]);
+  });
+
+  it("observes nothing when the install has no tables", () => {
+    expect(metrics([]).observed).toEqual([]);
+  });
+
+  it("maps each metric to the table it actually answers to", () => {
+    expect(metrics([], { probe: probeWith({ sessions: 3 }) }).observed).toEqual([
+      "tasks",
+      "harnesses",
+    ]);
+    expect(metrics([], { probe: probeWith({ pr: 3 }) }).observed).toEqual(["merges"]);
+    expect(metrics([], { probe: probeWith({ change_log: 3 }) }).observed).toEqual([
+      "interventions",
+      "peakParallelism",
+    ]);
+  });
+
+  it("never claims turns, repos, sizeMix or tokens, which it cannot derive", () => {
+    // Their tables are full and the counters are still placeholders: Transition
+    // carries none of them, so claiming them observed would be the same lie in
+    // the other direction.
+    const payload = metrics([], {
+      probe: probeWith({
+        sessions: 9,
+        pr: 9,
+        change_log: 9,
+        pr_checks: 9,
+        conversation_turns: 4_000,
+        model_usage_events: 4_000,
+      }),
+    });
+
+    expect(payload.observed).not.toContain("turns");
+    expect(payload.observed).not.toContain("repos");
+    expect(payload.observed).not.toContain("sizeMix");
+    expect(payload.observed).not.toContain("tokens");
+    expect(payload.totals.turns).toBe(0);
+  });
+
+  it("emits metrics in a stable order and never repeats one", () => {
+    const payload = metrics([], {
+      probe: probeWith({ sessions: 1, pr: 1, change_log: 1, pr_checks: 1 }),
+    });
+
+    expect(payload.observed).toEqual([
+      "tasks",
+      "merges",
+      "ciRecoveries",
+      "interventions",
+      "peakParallelism",
+      "harnesses",
+    ]);
+    expect(new Set(payload.observed).size).toBe(payload.observed?.length);
+  });
+
+  it("changes no counter — observed is context beside the numbers, not a filter", () => {
+    const rows = { sessions: 2, pr: 2, change_log: 40, pr_checks: 6 };
+    const build = (probe: MetricsInput["probe"]) => {
+      const t = stream();
+      return metrics(CI_STREAM.map(t), { probe });
+    };
+
+    const withSources = build(probeWith(rows));
+    const withoutSources = build(probeWith({}));
+
+    expect(withSources.totals).toEqual(withoutSources.totals);
+    expect(withSources.agents).toEqual(withoutSources.agents);
+  });
+
+  it("stays schema-valid, including across the JSON trip that publishes it", () => {
+    const payload = metrics([], {
+      probe: probeWith({ sessions: 1, pr: 1, change_log: 1, pr_checks: 1 }),
+    });
+
+    expect(() => IngestPayloadSchema.parse(payload)).not.toThrow();
+    expect(IngestPayloadSchema.parse(JSON.parse(JSON.stringify(payload)))).toEqual(payload);
+  });
+
+  it("rejects a repeated metric, so the set stays a set", () => {
+    const payload = metrics([], { probe: probeWith({ sessions: 1 }) });
+
+    expect(() => IngestPayloadSchema.parse({ ...payload, observed: ["tasks", "tasks"] })).toThrow();
+  });
+
+  it("rejects a metric name outside the closed enum", () => {
+    const payload = metrics([], { probe: probeWith({ sessions: 1 }) });
+
+    expect(() => IngestPayloadSchema.parse({ ...payload, observed: ["repoName"] })).toThrow();
+  });
+});
+
 describe("the payload contract", () => {
   const RICH: Spec[] = [
     { kind: "activity", to: "active", sessionId: "s1" },
@@ -529,6 +675,7 @@ describe("the payload contract", () => {
         ...SIZE_BUCKETS,
         ...DEATH_CAUSES,
         ...HARNESSES,
+        ...OBSERVABLE_METRICS,
         ...PAYLOAD_KEYS,
         "dewansh-shukla",
         "0.12.3",

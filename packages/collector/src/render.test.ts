@@ -283,6 +283,80 @@ describe("totals", () => {
   });
 });
 
+/**
+ * The card this project's own install produces. Actions is billing-locked on
+ * the account, so `pr_checks` holds no rows: CI recovery had no source, and the
+ * 0 beside it would otherwise read as "your agents fixed nothing".
+ */
+const UNMEASURED = payload({
+  ...OURS,
+  observed: ["tasks", "merges", "interventions", "peakParallelism", "harnesses"],
+});
+
+/** The same numbers from an install where CI did run and never went red. */
+const TRUE_ZERO = payload({
+  ...OURS,
+  observed: ["tasks", "merges", "ciRecoveries", "interventions", "peakParallelism", "harnesses"],
+});
+
+describe("unmeasured versus zero", () => {
+  it("blanks a counter that had no source instead of printing 0", () => {
+    const card = plain(UNMEASURED);
+    expect(card).toMatch(/CI recoveries\s+—/);
+    expect(card).not.toMatch(/CI recoveries\s+0/);
+  });
+
+  it("still prints 0 when the source existed and nothing needed recovering", () => {
+    const card = plain(TRUE_ZERO);
+    expect(card).toMatch(/CI recoveries\s+0/);
+    expect(card).not.toMatch(/CI recoveries\s+—/);
+  });
+
+  it("says why the blank is blank, in the reader's terms", () => {
+    const card = plain(UNMEASURED);
+    expect(card).toContain("— is not zero. This install had no source for:");
+    expect(card).toContain("CI recoveries — AO recorded no CI checks");
+  });
+
+  it("names turns as unrecorded rather than dropping the row", () => {
+    const card = plain(UNMEASURED);
+    expect(card).toMatch(/Turns\s+—/);
+    expect(card).toContain("AO records no turns for TUI-mode sessions");
+  });
+
+  it("blanks the per-agent column too, since it is the same missing source", () => {
+    // claude-code: 10 tasks, 6 merged, ci saves unmeasured, 4 died.
+    expect(plain(UNMEASURED)).toMatch(/claude-code\s+10\s+6\s+—\s+4\s+4h 57m/);
+    expect(plain(TRUE_ZERO)).toMatch(/claude-code\s+10\s+6\s+0\s+4\s+4h 57m/);
+  });
+
+  it("blanks the headline when no pull request was ever recorded", () => {
+    const card = plain(payload({ ...OURS, observed: ["tasks", "harnesses"] }));
+    expect(card).toContain("— merges");
+    expect(card).toContain("AO recorded no pull requests");
+    expect(card).not.toContain("6 merges");
+  });
+
+  it("takes an empty observed set at its word — nothing here was measurable", () => {
+    const card = plain(payload({ ...OURS, observed: [] }));
+    expect(card).toContain("— merges");
+    expect(card).not.toMatch(/Harnesses\s+1/);
+  });
+
+  it("reads a payload with no observed field at face value, as before", () => {
+    // A collector too old to report observability makes no claim either way;
+    // blanking its card would invent a finding rather than report one.
+    const card = plain(OURS);
+    expect(card).toMatch(/CI recoveries\s+0/);
+    expect(card).not.toContain("— is not zero");
+    expect(card).not.toContain("Turns");
+  });
+
+  it("renders the unmeasured card", () => {
+    expect(plain(UNMEASURED)).toMatchSnapshot();
+  });
+});
+
 describe("the crew", () => {
   it("lists each harness with its counters", () => {
     expect(plain(OURS)).toMatch(/claude-code\s+10\s+6\s+0\s+4\s+4h 57m/);

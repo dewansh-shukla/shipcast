@@ -173,3 +173,66 @@ exports[`snapshots > renders the all-zeros card 1`] = `
 │                                                          │
 └──────────────────────────────────────────────────────────┘"
 `;
+
+exports[`unmeasured versus zero > renders the unmeasured card 1`] = `
+"┌──────────────────────────────────────────────────────────┐
+│                                                          │
+│  AO WRAPPED                             Jul 13 — Aug 12  │
+│  dewansh-shukla                                          │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  6 merges                                                │
+│  out of 10 tasks handed to agents (60% closed)           │
+│                                                          │
+│  CI recoveries            —  Interventions           12  │
+│  Peak parallel            5  Harnesses                1  │
+│  Turns                    —  Repos                    —  │
+│                                                          │
+│  — is not zero. This install had no source for:          │
+│    CI recoveries — AO recorded no CI checks              │
+│    Turns — AO records no turns for TUI-mode sessions     │
+│    Repos — the collector does not derive this yet        │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  THE CREW                                                │
+│                                                          │
+│  harness           tasks merged ci saves  died   median  │
+│  claude-code          10      6        —     4   4h 57m  │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  AWARDS                                                  │
+│                                                          │
+│  Most Productive  not enough data yet                    │
+│  Most Reliable    not enough data yet                    │
+│  Most Chaotic     not enough data yet                    │
+│  Firefighter      not enough data yet                    │
+│  Workhorse        not enough data yet                    │
+│  Speed Demon      not enough data yet                    │
+│  Drama Queen      not enough data yet                    │
+│                                                          │
+│  An award is a comparison and claude-code is the only    │
+│  harness here. Run a second one and these fill in.       │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  GRAVEYARD                                               │
+│                                                          │
+│  4 sessions ended without a merge. None of them cost     │
+│  anything — punishing failure punishes trying.           │
+│                                                          │
+│  No cause was recorded for any of them.                  │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  Measured here, from a read-only pass over AO's own      │
+│  database. No code, diffs, repo names or prompts were    │
+│  read at all.                                            │
+│                                                          │
+│  Run  ao-wrapped --publish  to put these counters on     │
+│  the board.                                              │
+│                                                          │
+└──────────────────────────────────────────────────────────┘"
+`;
