@@ -1,4 +1,4 @@
-# C2 · The Wrapped card
+# 03 · The Wrapped card
 
 **Harness:** cursor · **Owns:** `apps/web/app/w/[handle]/page.tsx`, `apps/web/app/w/[handle]/card.png/route.tsx` (new)
 

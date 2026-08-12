@@ -1,4 +1,4 @@
-# A1 · Schema probe
+# 01 · Schema probe
 
 **Harness:** claude-code · **Owns:** `packages/collector/src/probe.ts`
 
@@ -33,5 +33,5 @@ Feature flags map to these tables:
 Tests must not depend on the developer's real AO database — build a small
 fixture database in a temp dir with `node:sqlite`.
 
-This blocks A2 and A3. Prefer landing a correct probe quickly over a
+This blocks 07 and 08. Prefer landing a correct probe quickly over a
 comprehensive one.

@@ -1,4 +1,4 @@
-# B1 · Database and ingest
+# 02 · Database and ingest
 
 **Harness:** codex · **Owns:** `apps/web/db/schema.ts`, `apps/web/app/api/ingest/route.ts`
 

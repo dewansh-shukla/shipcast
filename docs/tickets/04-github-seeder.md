@@ -1,4 +1,4 @@
-# D1 · Public GitHub seeder
+# 04 · Public GitHub seeder
 
 **Harness:** opencode · **Owns:** `scripts/seed-github.ts`
 
@@ -11,7 +11,7 @@ This is what puts people on the board without them installing anything, so it ha
 to work on repos whose owners have never heard of us. Public data only, no
 authentication beyond a read-only token from `GITHUB_TOKEN`.
 
-Output JSON to stdout matching a type you define and export, so B1 can consume it
+Output JSON to stdout matching a type you define and export, so ticket 02 can consume it
 later. Do not write to a database — that boundary is not yours.
 
 Requirements:
