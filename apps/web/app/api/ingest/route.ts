@@ -1,6 +1,6 @@
 import { IngestPayloadSchema } from "@ao-wrapped/shared";
 import type { ZodIssue } from "zod";
-import { getIngestStore } from "../../../db/store.ts";
+import { getIngestStore, weekKeyForWindow } from "../../../db/store.ts";
 
 /**
  * TICKET B1 — ingest.
@@ -12,6 +12,10 @@ import { getIngestStore } from "../../../db/store.ts";
  * Auth is a bearer token issued by the device-claim flow. Scores are NOT
  * accepted from the client under any circumstance — the collector reports
  * counters and the server does the arithmetic (see lib/score.ts).
+ *
+ * Nor is the season accepted from the client. The board runs in weekly seasons
+ * and the week a payload lands in is derived here from its window, so a
+ * collector cannot file this week's numbers into a season that has closed.
  */
 
 /** Extract the bearer token, or null if the header is absent or malformed. */
@@ -99,6 +103,27 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
+  /**
+   * Weeks are the unit the board resets on, so a window that straddles a Monday
+   * has no season to land in — splitting it here would mean inventing a split
+   * of the counters, which is exactly the arithmetic the collector is not
+   * allowed to hand us. Reject it and name the field instead.
+   */
+  const weekKey = weekKeyForWindow(parsed.data.window);
+  if (weekKey === null) {
+    return Response.json(
+      {
+        error: "invalid payload",
+        reason:
+          "window spans more than one week; the board runs in weekly seasons, " +
+          "so send one Monday-to-Sunday window per publish",
+        fields: ["window.from", "window.to"],
+        unknownFields: [],
+      },
+      { status: 400 },
+    );
+  }
+
   const stored = await store.saveSnapshot(builder.id, parsed.data);
 
   return Response.json(
@@ -106,6 +131,8 @@ export async function POST(request: Request): Promise<Response> {
       ok: true,
       snapshotId: stored.snapshot.id,
       handle: builder.handle,
+      /** The season the row landed in, derived here — never read off the body. */
+      weekKey: stored.snapshot.weekKey,
       window: { from: stored.snapshot.windowFrom, to: stored.snapshot.windowTo },
       agents: stored.agents.length,
       replaced: stored.replaced,
