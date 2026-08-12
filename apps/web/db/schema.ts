@@ -67,7 +67,7 @@ export const builders = pgTable(
 );
 
 /**
- * One ingest payload per builder per window. Counters only — no score column
+ * One ingest payload per builder per season. Counters only — no score column
  * exists here on purpose, and adding one is the bug this table is shaped to
  * prevent.
  */
@@ -84,6 +84,21 @@ export const snapshots = pgTable(
     aoVersion: text("ao_version").notNull(),
     collectorVersion: text("collector_version").notNull(),
 
+    /**
+     * ISO week the payload belongs to, e.g. `2026-W33`. Derived server-side by
+     * `weekKeyForWindow` from the window below, never read off the payload:
+     * a collector that could name its own season could write into a closed one.
+     *
+     * Text rather than a date because it is an identity, not a range — the
+     * board addresses a season by this exact string (`/board/2026-W33`), and
+     * the keys sort lexically into chronological order within and across years.
+     */
+    weekKey: text("week_key").notNull(),
+
+    /**
+     * The window the collector actually measured, kept because the card states
+     * it. Descriptive only — `weekKey` is what rows are keyed and queried by.
+     */
     windowFrom: date("window_from", { mode: "string" }).notNull(),
     windowTo: date("window_to", { mode: "string" }).notNull(),
 
@@ -111,9 +126,14 @@ export const snapshots = pgTable(
       .defaultNow(),
   },
   (table) => [
-    /** One payload per builder per window; a re-send replaces the row. */
-    unique("snapshots_builder_window_key").on(table.builderId, table.windowFrom, table.windowTo),
-    index("snapshots_window_idx").on(table.windowFrom, table.windowTo),
+    /**
+     * One payload per builder per season. A republish inside the same week
+     * replaces the row; the first republish after Monday's rollover carries a
+     * new key and so inserts, leaving the closed season untouched.
+     */
+    unique("snapshots_builder_week_key").on(table.builderId, table.weekKey),
+    /** The board reads one season at a time, current or past. */
+    index("snapshots_week_idx").on(table.weekKey),
   ],
 );
 

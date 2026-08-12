@@ -11,7 +11,8 @@ function validPayload(): IngestPayload {
     handle: "octocat",
     aoVersion: "0.12.3",
     collectorVersion: "0.1.0",
-    window: { from: "2026-08-01", to: "2026-08-12" },
+    /** One ISO week — 2026-W33 — because ingest rejects anything wider. */
+    window: { from: "2026-08-10", to: "2026-08-16" },
     totals: {
       tasks: 12,
       merges: 9,
@@ -86,7 +87,8 @@ describe("POST /api/ingest", () => {
     const body = await response.json();
     expect(body.ok).toBe(true);
     expect(body.agents).toBe(2);
-    expect(body.window).toEqual({ from: "2026-08-01", to: "2026-08-12" });
+    expect(body.window).toEqual({ from: "2026-08-10", to: "2026-08-16" });
+    expect(body.weekKey).toBe("2026-W33");
 
     const [stored] = store.snapshotsFor(builderId);
     expect(stored).toBeDefined();
@@ -106,7 +108,7 @@ describe("POST /api/ingest", () => {
     expect(Object.keys(stored!.snapshot)).not.toContain("score");
   });
 
-  it("replaces the snapshot when the same window is sent twice", async () => {
+  it("replaces the snapshot when the same season is published twice", async () => {
     await POST(post(validPayload()));
 
     const second = validPayload();
@@ -114,9 +116,73 @@ describe("POST /api/ingest", () => {
     const response = await POST(post(second));
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({ replaced: true });
+    await expect(response.json()).resolves.toMatchObject({ replaced: true, weekKey: "2026-W33" });
     expect(store.snapshotsFor(builderId)).toHaveLength(1);
     expect(store.snapshotsFor(builderId)[0]!.snapshot.merges).toBe(11);
+  });
+
+  it("derives the season from the window instead of trusting the body", async () => {
+    /**
+     * The schema has no week field, so a collector's attempt to name its own
+     * season arrives as an unknown key — and the stored key comes from the
+     * dates either way.
+     */
+    const response = await POST(post({ ...validPayload(), weekKey: "2026-W01" }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ unknownFields: ["weekKey"] });
+
+    await POST(post(validPayload()));
+    expect(store.snapshotsFor(builderId)[0]!.snapshot.weekKey).toBe("2026-W33");
+  });
+
+  it("rejects a window that spans more than one week, naming the field", async () => {
+    const payload = validPayload();
+    /** Saturday to the Wednesday after next: 2026-W31 through 2026-W33. */
+    payload.window = { from: "2026-08-01", to: "2026-08-12" };
+
+    const response = await POST(post(payload));
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe("invalid payload");
+    expect(body.fields).toEqual(["window.from", "window.to"]);
+    expect(body.reason).toContain("more than one week");
+    expect(store.snapshotsFor(builderId)).toHaveLength(0);
+  });
+
+  it("accepts a window that ends on Sunday and rejects one that reaches Monday", async () => {
+    const sunday = validPayload();
+    sunday.window = { from: "2026-08-10", to: "2026-08-16" };
+    expect((await POST(post(sunday))).status).toBe(201);
+
+    const monday = validPayload();
+    monday.window = { from: "2026-08-10", to: "2026-08-17" };
+    expect((await POST(post(monday))).status).toBe(400);
+
+    /** The rejected payload left the season it tried to extend untouched. */
+    expect(store.snapshotsFor(builderId)).toHaveLength(1);
+    expect(store.snapshotsFor(builderId)[0]!.snapshot.windowTo).toBe("2026-08-16");
+  });
+
+  it("opens a new season after the rollover instead of replacing the last one", async () => {
+    await POST(post(validPayload()));
+
+    const next = validPayload();
+    next.window = { from: "2026-08-17", to: "2026-08-23" };
+    next.totals.merges = 1;
+    const response = await POST(post(next));
+
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toMatchObject({
+      replaced: false,
+      weekKey: "2026-W34",
+    });
+
+    const seasons = store.snapshotsFor(builderId);
+    expect(seasons.map((row) => row.snapshot.weekKey)).toEqual(["2026-W34", "2026-W33"]);
+    /** The closed season still reports what it reported. */
+    expect(seasons.find((row) => row.snapshot.weekKey === "2026-W33")!.snapshot.merges).toBe(9);
   });
 
   it("rejects an unknown key with a 400 that names the field", async () => {

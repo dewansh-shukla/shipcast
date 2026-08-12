@@ -40,13 +40,20 @@ export function weekStart(date: Date): Date {
  * ISO week number. Week 1 is the week containing the year's first Thursday, so
  * early January can belong to the previous year's final week — which is why the
  * year in the key comes from the Thursday and not from `date`.
+ *
+ * Counting runs from January 4th, not January 1st. Jan 4 is in ISO week 1 in
+ * every year; Jan 1 is not. When a year opens on a Friday, Saturday or Sunday,
+ * Jan 1 still belongs to the *previous* year's final week, so anchoring on it
+ * starts the count a week early and numbers every week of that year one too
+ * high — 2027-01-04 comes out as `2027-W02` and `2027-W01` names nothing.
+ * `weekWindowFromKey` already anchors on Jan 4; this now agrees with it.
  */
 export function weekKeyFor(date: Date): string {
   const monday = weekStart(date);
   const thursday = new Date(monday.getTime() + 3 * DAY_MS);
   const year = thursday.getUTCFullYear();
-  const jan1 = new Date(Date.UTC(year, 0, 1));
-  const week = 1 + Math.round((thursday.getTime() - weekStart(jan1).getTime()) / (7 * DAY_MS));
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const week = 1 + Math.round((thursday.getTime() - weekStart(jan4).getTime()) / (7 * DAY_MS));
   return `${year}-W${String(week).padStart(2, "0")}`;
 }
 
