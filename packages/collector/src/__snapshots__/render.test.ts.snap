@@ -1,0 +1,175 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`snapshots > renders a populated multi-harness card 1`] = `
+"┌──────────────────────────────────────────────────────────┐
+│                                                          │
+│  AO WRAPPED                             Jul 13 — Aug 12  │
+│  octocat                                                 │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  61 merges                                               │
+│  out of 128 tasks handed to agents (48% closed)          │
+│                                                          │
+│  CI recoveries           19  Interventions           23  │
+│  Peak parallel            7  Harnesses                4  │
+│  Turns                1,840  Repos                    6  │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  THE CREW                                                │
+│                                                          │
+│  harness           tasks merged ci saves  died   median  │
+│  claude-code          58     31       11     7      13m  │
+│  codex                34     16        5     6       9m  │
+│  cursor               22      9        2     8      18m  │
+│  copilot              14      5        1     5       7m  │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  AWARDS                                                  │
+│                                                          │
+│  Most Productive  claude-code · 31 of 61 merges          │
+│  Most Reliable    claude-code · 53% of 58 merged         │
+│  Most Chaotic     cursor · 36% of its sessions died      │
+│  Firefighter      claude-code · 11 red builds saved      │
+│  Workhorse        claude-code · 58 of 128 tasks          │
+│  Speed Demon      copilot · 7m median run                │
+│  Drama Queen      cursor · 0.4 nudges per task           │
+│                                                          │
+│  Every category had a clear winner.                      │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  GRAVEYARD                                               │
+│                                                          │
+│  67 sessions ended without a merge. None of them cost    │
+│  anything — punishing failure punishes trying.           │
+│                                                          │
+│  A cause was recorded for 6:                             │
+│  2 CI never went green                                   │
+│  2 conflict it could not resolve                         │
+│  1 stopped without a signal                              │
+│  1 review it could not answer                            │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  Measured here, from a read-only pass over AO's own      │
+│  database. No code, diffs, repo names or prompts were    │
+│  read at all.                                            │
+│                                                          │
+│  Run  ao-wrapped --publish  to put these counters on     │
+│  the board.                                              │
+│                                                          │
+└──────────────────────────────────────────────────────────┘"
+`;
+
+exports[`snapshots > renders our own first real card 1`] = `
+"┌──────────────────────────────────────────────────────────┐
+│                                                          │
+│  AO WRAPPED                             Jul 13 — Aug 12  │
+│  dewansh-shukla                                          │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  6 merges                                                │
+│  out of 10 tasks handed to agents (60% closed)           │
+│                                                          │
+│  CI recoveries            0  Interventions           12  │
+│  Peak parallel            5  Harnesses                1  │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  THE CREW                                                │
+│                                                          │
+│  harness           tasks merged ci saves  died   median  │
+│  claude-code          10      6        0     4   4h 57m  │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  AWARDS                                                  │
+│                                                          │
+│  Most Productive  not enough data yet                    │
+│  Most Reliable    not enough data yet                    │
+│  Most Chaotic     not enough data yet                    │
+│  Firefighter      not enough data yet                    │
+│  Workhorse        not enough data yet                    │
+│  Speed Demon      not enough data yet                    │
+│  Drama Queen      not enough data yet                    │
+│                                                          │
+│  An award is a comparison and claude-code is the only    │
+│  harness here. Run a second one and these fill in.       │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  GRAVEYARD                                               │
+│                                                          │
+│  4 sessions ended without a merge. None of them cost     │
+│  anything — punishing failure punishes trying.           │
+│                                                          │
+│  No cause was recorded for any of them.                  │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  Measured here, from a read-only pass over AO's own      │
+│  database. No code, diffs, repo names or prompts were    │
+│  read at all.                                            │
+│                                                          │
+│  Run  ao-wrapped --publish  to put these counters on     │
+│  the board.                                              │
+│                                                          │
+└──────────────────────────────────────────────────────────┘"
+`;
+
+exports[`snapshots > renders the all-zeros card 1`] = `
+"┌──────────────────────────────────────────────────────────┐
+│                                                          │
+│  AO WRAPPED                             Jul 13 — Aug 12  │
+│  dewansh-shukla                                          │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  0 merges                                                │
+│  No tasks ran in this window.                            │
+│                                                          │
+│  CI recoveries            0  Interventions            0  │
+│  Peak parallel            0  Harnesses                0  │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  THE CREW                                                │
+│                                                          │
+│  No sessions ran in this window. Point --from at a       │
+│  range where AO was working.                             │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  AWARDS                                                  │
+│                                                          │
+│  Most Productive  not enough data yet                    │
+│  Most Reliable    not enough data yet                    │
+│  Most Chaotic     not enough data yet                    │
+│  Firefighter      not enough data yet                    │
+│  Workhorse        not enough data yet                    │
+│  Speed Demon      not enough data yet                    │
+│  Drama Queen      not enough data yet                    │
+│                                                          │
+│  No agent ran in this window, so no title was earned.    │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  GRAVEYARD                                               │
+│                                                          │
+│  Empty. Nothing ran in this window to bury.              │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  Measured here, from a read-only pass over AO's own      │
+│  database. No code, diffs, repo names or prompts were    │
+│  read at all.                                            │
+│                                                          │
+│  Run  ao-wrapped --publish  to put these counters on     │
+│  the board.                                              │
+│                                                          │
+└──────────────────────────────────────────────────────────┘"
+`;
