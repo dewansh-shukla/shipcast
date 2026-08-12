@@ -40,23 +40,6 @@ measure the wrong worker.
 | Harness swaps     | `agent_switches`           | `from_harness → target_harness` mid-session                        |
 | Graveyard         | `sessions` + `pr`          | Terminated with no merged PR; cause from the last `pr` row         |
 
-### Why we do not use GitHub as a source
-
-An earlier design seeded the leaderboard from public GitHub merge counts, so people would appear
-without installing anything. We removed it, for a reason that goes to the heart of the product:
-
-**From outside, a merged PR looks identical whether an agent opened it or a human typed it.** The
-product claims to measure AI work outcomes. GitHub cannot distinguish AI work from any other work,
-so it is the wrong instrument — not a noisy one, the wrong one.
-
-AO can. `pr.session_id` joins every pull request to the agent session that produced it. Every
-number on the board is therefore provably agent work, which is also the answer to "why can't I
-build this with the GitHub API?"
-
-GitHub keeps one job: **verification**. `scripts/seed-github.ts` compares self-reported merge
-counts against publicly visible ones, so a forged collector payload loses its verified badge. That
-is an integrity check, not a source of truth.
-
 ### Why `change_log` matters
 
 AO's architecture is explicit that _display status is never stored — it is computed at read time
@@ -109,8 +92,10 @@ computes is a claim, not a fact.
 packages/shared      payload schema, scoring weights, enums — the contract
 packages/collector   npx CLI: reads ~/.ao/data/ao.db read-only, aggregates locally
 apps/web             leaderboard, ingest API, scoring engine, OG card renderer
-scripts/             seed-github.ts — verification only, never a ranking input
+scripts/             seed-github.ts — merge-count verification
 ```
+
+GitHub is used only to verify self-reported merge counts against publicly visible ones.
 
 ## Known gaps
 
