@@ -89,7 +89,7 @@ export async function GET(request: Request): Promise<Response> {
 
   if (!user) return back("error");
 
-  const result = store.approve(userCode, {
+  const result = await store.approve(userCode, {
     handle: user.login,
     githubId: String(user.id),
     avatarUrl: user.avatar_url,

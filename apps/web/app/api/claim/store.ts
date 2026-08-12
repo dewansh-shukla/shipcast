@@ -1,4 +1,5 @@
-import { InMemoryIngestStore, getIngestStore } from "../../../db/store.ts";
+import type { BuilderRow } from "../../../db/schema.ts";
+import { getIngestStore, type IngestStore } from "../../../db/store.ts";
 
 /**
  * TICKET 10 — device-claim state.
@@ -157,16 +158,35 @@ export interface ApprovalResult {
   handle?: string;
 }
 
+/**
+ * What the claim flow needs from a store beyond `IngestStore`: somewhere to put
+ * a builder and somewhere to put a token. Both implementations satisfy it —
+ * structurally, so adding a third store does not mean editing this file.
+ */
+interface TokenIssuingStore {
+  upsertBuilder(init: {
+    handle: string;
+    githubId?: string | null;
+    avatarUrl?: string | null;
+  }): Promise<BuilderRow>;
+  issueToken(builderId: string, token: string): void | Promise<void>;
+}
+
+function canIssueTokens(store: IngestStore): store is IngestStore & TokenIssuingStore {
+  const candidate = store as Partial<TokenIssuingStore>;
+  return (
+    typeof candidate.upsertBuilder === "function" && typeof candidate.issueToken === "function"
+  );
+}
+
 export class ClaimStore {
   private readonly byUserCode = new Map<string, ClaimRecord>();
   private readonly byDeviceCode = new Map<string, string>();
   private readonly byOauthState = new Map<string, string>();
   /**
-   * handle (lowercased) → the builder it resolved to. The ingest store can
-   * create builders and issue tokens but cannot yet look one up by handle, so a
-   * second claim by the same person would otherwise mint a duplicate builder
-   * row. Ticket 12 owns that store; this map stands in until it grows the read
-   * method.
+   * handle (lowercased) → the builder it resolved to. Now only a cache: both
+   * stores deduplicate by handle themselves, so this saves a round trip rather
+   * than standing in for a lookup that does not exist.
    */
   private readonly buildersByHandle = new Map<string, LinkedBuilder>();
 
@@ -239,7 +259,11 @@ export class ClaimStore {
    * refused rather than re-approved, so a code read off a screen cannot be
    * replayed into a second token.
    */
-  approve(userCode: string, identity: ApprovedIdentity, now = Date.now()): ApprovalResult {
+  async approve(
+    userCode: string,
+    identity: ApprovedIdentity,
+    now = Date.now(),
+  ): Promise<ApprovalResult> {
     const record = this.byUserCode.get(normalizeUserCode(userCode));
     if (!record) return { ok: false, status: "unknown" };
 
@@ -248,7 +272,7 @@ export class ClaimStore {
     if (!isValidHandle(identity.handle)) return { ok: false, status: "denied" };
 
     const token = randomToken();
-    const builder = this.linkBuilder(identity, token);
+    const builder = await this.linkBuilder(identity, token);
 
     record.state = "approved";
     record.identity = { ...identity, handle: builder.handle };
@@ -308,30 +332,28 @@ export class ClaimStore {
    *
    * A second claim by the same person must reuse the first builder row —
    * otherwise their two windows land under two ids and only one of them is ever
-   * on the board.
+   * on the board. `upsertBuilder` does that lookup in whichever store is
+   * active, so this no longer depends on the in-memory map to deduplicate.
+   *
+   * The check is a capability check rather than `instanceof`: ticket 16 added a
+   * Postgres store that issues tokens just as well, and naming one class here
+   * meant the whole claim flow failed the moment `DATABASE_URL` was set.
    */
-  private linkBuilder(identity: ApprovedIdentity, token: string): LinkedBuilder {
+  private async linkBuilder(identity: ApprovedIdentity, token: string): Promise<LinkedBuilder> {
     const store = getIngestStore();
-    if (!(store instanceof InMemoryIngestStore)) {
+    if (!canIssueTokens(store)) {
       throw new ClaimUnavailableError("the active ingest store cannot issue device tokens");
     }
 
-    const key = identity.handle.toLowerCase();
-    const existing = this.buildersByHandle.get(key);
+    const row = await store.upsertBuilder({
+      handle: identity.handle,
+      githubId: identity.githubId,
+      avatarUrl: identity.avatarUrl,
+    });
+    const builder: LinkedBuilder = { id: row.id, handle: row.handle };
 
-    const builder: LinkedBuilder =
-      existing ??
-      (() => {
-        const row = store.addBuilder({
-          handle: identity.handle,
-          githubId: identity.githubId,
-          avatarUrl: identity.avatarUrl,
-        });
-        return { id: row.id, handle: row.handle };
-      })();
-
-    this.buildersByHandle.set(key, builder);
-    store.issueToken(builder.id, token);
+    this.buildersByHandle.set(identity.handle.toLowerCase(), builder);
+    await store.issueToken(builder.id, token);
     return builder;
   }
 

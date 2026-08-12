@@ -188,8 +188,48 @@ export const seeds = pgTable(
   (table) => [unique("seeds_handle_window_key").on(table.handle, table.windowFrom, table.windowTo)],
 );
 
+/**
+ * TICKET 16 — bearer tokens issued by the device-claim flow.
+ *
+ * These lived in process memory, which works for one long-lived server and
+ * fails everywhere else: on serverless a token minted in one invocation is
+ * unknown to the next, so the collector's stored credential stops resolving and
+ * every publish 401s. Snapshots surviving a restart is worth nothing if the
+ * token that authorises them does not.
+ *
+ * Only the SHA-256 of the token is stored. A leaked database should not hand
+ * over working credentials, and nothing here ever needs the original — the
+ * check is a hash comparison. A plain hash rather than a password KDF is
+ * deliberate: these are 256-bit random strings, not passwords, so there is no
+ * low-entropy secret for a slow hash to protect.
+ */
+export const deviceTokens = pgTable(
+  "device_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    builderId: uuid("builder_id")
+      .notNull()
+      .references(() => builders.id, { onDelete: "cascade" }),
+
+    /** Hex SHA-256 of the presented token. Never the token itself. */
+    tokenHash: text("token_hash").notNull(),
+
+    issuedAt: timestamp("issued_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    /** The lookup is by hash, and one hash belongs to one builder. */
+    unique("device_tokens_hash_key").on(table.tokenHash),
+    index("device_tokens_builder_idx").on(table.builderId),
+  ],
+);
+
 export const buildersRelations = relations(builders, ({ many }) => ({
   snapshots: many(snapshots),
+  deviceTokens: many(deviceTokens),
+}));
+
+export const deviceTokensRelations = relations(deviceTokens, ({ one }) => ({
+  builder: one(builders, { fields: [deviceTokens.builderId], references: [builders.id] }),
 }));
 
 export const snapshotsRelations = relations(snapshots, ({ one, many }) => ({
@@ -209,3 +249,5 @@ export type AgentStatsRow = typeof agentStats.$inferSelect;
 export type NewAgentStatsRow = typeof agentStats.$inferInsert;
 export type SeedRow = typeof seeds.$inferSelect;
 export type NewSeedRow = typeof seeds.$inferInsert;
+export type DeviceTokenRow = typeof deviceTokens.$inferSelect;
+export type NewDeviceTokenRow = typeof deviceTokens.$inferInsert;

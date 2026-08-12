@@ -15,6 +15,13 @@
       "when": 1786567635852,
       "tag": "0001_weekly_seasons",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786568934490,
+      "tag": "0002_device_tokens",
+      "breakpoints": true
     }
   ]
 }
