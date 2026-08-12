@@ -1,0 +1,636 @@
+/*
+ * TICKET 21 — the landing page.
+ *
+ * Neo-brutalist, but not the default one: black on safety yellow with a hard
+ * shadow is its own template now and appears regardless of subject. The palette
+ * here is the product's own, so the front door and the instrument read as one
+ * family — loud outside, precise inside, held together by the shared accents.
+ *
+ * Every rule is scoped under `.landing`. This file is imported by a page rather
+ * than by the root layout, and Next keeps global CSS global once a client
+ * navigation happens: an unscoped `body` rule here would restyle the card, the
+ * board and the claim pages, which are finished and belong to other tickets.
+ *
+ * Rules: 3px ink borders, solid ink shadows offset 6-8px and never blurred, no
+ * border-radius anywhere, flat saturated blocks, oversized display type. Two
+ * faces only — a heavy grotesque for display, ui-monospace for every number and
+ * command. Numbers are tabular so columns line up.
+ */
+
+/*
+ * The root layout is another ticket's file, so the user-agent `body { margin }`
+ * is neutralised from here — scoped with `:has()` so it applies only on a page
+ * that actually renders this landing. The card, the board and the claim pages
+ * keep whatever they have today.
+ */
+body:has(> .landing) {
+  margin: 0;
+  background: #f4f2ed;
+}
+
+.landing {
+  --paper: #f4f2ed;
+  --ink: #0e1116;
+  --phosphor: #ffb454;
+  --signal: #5fd4c4;
+  --ember: #e0685a;
+  --ash: #7e8794;
+
+  --display: "Arial Black", "Helvetica Neue", Impact, sans-serif;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Mono", Menlo, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+
+  --edge: 3px solid var(--ink);
+  --drop: 8px 8px 0 var(--ink);
+  --drop-sm: 6px 6px 0 var(--ink);
+
+  min-height: 100vh;
+  padding: clamp(1rem, 4vw, 3rem) clamp(0.75rem, 4vw, 3rem) clamp(2rem, 6vw, 4rem);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: clamp(1rem, 0.96rem + 0.2vw, 1.0625rem);
+  line-height: 1.5;
+}
+
+.landing *,
+.landing *::before,
+.landing *::after {
+  box-sizing: border-box;
+}
+
+/* `:where()` contributes no specificity, so this reset stays weaker than every
+   single-class rule below it. Written as `.landing p` it would beat `.post-meta`
+   and silently drop that rule's margin — which it did, once. */
+.landing
+  :where(
+    h1,
+    .landing h2,
+    .landing h3,
+    .landing p,
+    .landing ul,
+    .landing dl,
+    .landing dd,
+    .landing figure,
+    .landing blockquote
+  ) {
+  margin: 0;
+  padding: 0;
+}
+
+.landing ul {
+  list-style: none;
+}
+
+/* Signal reads against both the paper ground and the ink blocks, so one focus
+   ring works everywhere rather than needing a per-surface exception. */
+.landing :focus-visible {
+  outline: 3px solid var(--signal);
+  outline-offset: 3px;
+}
+
+.landing-shell {
+  max-width: 68rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2rem, 5vw, 3.5rem);
+}
+
+/* ── shared block ─────────────────────────────────────────────────────────── */
+
+.landing .block {
+  border: var(--edge);
+  box-shadow: var(--drop);
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+}
+
+.landing .block-head {
+  border-bottom: var(--edge);
+  padding: 0.6rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.landing .block-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(1rem, 3vw, 1.5rem);
+}
+
+.landing .eyebrow {
+  display: inline-block;
+  border: var(--edge);
+  box-shadow: var(--drop-sm);
+  background: var(--phosphor);
+  padding: 0.35rem 0.8rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.landing .section-title {
+  font-family: var(--display);
+  font-size: clamp(1.5rem, 4.5vw, 2.25rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+.landing .lede {
+  max-width: 46ch;
+  font-size: clamp(1rem, 0.9rem + 0.4vw, 1.2rem);
+}
+
+.landing .caption {
+  color: var(--ash);
+  font-size: 0.85rem;
+}
+
+.landing .num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── masthead ─────────────────────────────────────────────────────────────── */
+
+.landing .masthead {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 2.5vw, 1.5rem);
+  align-items: flex-start;
+}
+
+.landing .headline {
+  font-family: var(--display);
+  font-size: clamp(2.25rem, 9vw, 5rem);
+  /* Loose enough that a highlighted phrase cannot sit on the line above it.
+     Display type this heavy still reads tight at 1.08. */
+  line-height: 1.14;
+  letter-spacing: -0.035em;
+  text-transform: uppercase;
+  max-width: 16ch;
+}
+
+.landing .headline .strike {
+  text-decoration: line-through;
+  text-decoration-color: var(--ember);
+  text-decoration-thickness: 0.09em;
+  text-decoration-skip-ink: none;
+}
+
+.landing .headline .lit {
+  background: var(--phosphor);
+  /* Cloned so a phrase that wraps is highlighted on both lines, not just one. */
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  padding: 0 0.12em;
+}
+
+/* ── hero side-by-side ────────────────────────────────────────────────────── */
+
+.landing .versus {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(1rem, 3vw, 2rem);
+  align-items: stretch;
+}
+
+.landing .versus > * {
+  min-width: 0;
+}
+
+.landing .post .block-head {
+  background: var(--ember);
+}
+
+.landing .receipts .block-head {
+  background: var(--signal);
+}
+
+.landing .post-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.landing .post-quote {
+  font-size: clamp(1rem, 0.85rem + 0.6vw, 1.25rem);
+  font-style: italic;
+}
+
+.landing .post-meta,
+.landing .receipts-meta {
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 2px dashed var(--ash);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ash);
+}
+
+.landing .receipts-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.landing .figures {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.landing .figure {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.landing .figure-value {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(1.75rem, 6vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1;
+  min-width: 3ch;
+  text-align: right;
+}
+
+.landing .figure-label {
+  font-size: clamp(0.9rem, 0.85rem + 0.2vw, 1.05rem);
+}
+
+.landing .figure--nudge .figure-value {
+  color: var(--ember);
+}
+
+.landing .punchline {
+  border: var(--edge);
+  box-shadow: var(--drop);
+  background: var(--ink);
+  color: var(--paper);
+  padding: clamp(1rem, 3vw, 1.5rem);
+  font-family: var(--display);
+  font-size: clamp(1.05rem, 3.2vw, 1.6rem);
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+}
+
+.landing .punchline em {
+  font-style: normal;
+  color: var(--phosphor);
+}
+
+/* ── the command ──────────────────────────────────────────────────────────── */
+
+.landing .command {
+  border: var(--edge);
+  box-shadow: var(--drop);
+  background: var(--ink);
+  color: var(--paper);
+  padding: clamp(1rem, 3vw, 1.5rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.landing .command-label {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--signal);
+}
+
+.landing .command-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+.landing .command-code {
+  flex: 1 1 20rem;
+  font-family: var(--mono);
+  font-size: clamp(0.85rem, 0.75rem + 0.5vw, 1.1rem);
+  color: var(--phosphor);
+  /* Wraps at the spaces rather than scrolling away: on a 360px screen a
+     horizontally clipped command is a command nobody can read or trust. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.landing .copy {
+  flex: 0 0 auto;
+  border: var(--edge);
+  box-shadow: var(--drop-sm);
+  background: var(--phosphor);
+  color: var(--ink);
+  padding: 0.7rem 1.4rem;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.landing .copy:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 8px 8px 0 var(--ink);
+}
+
+.landing .copy:active {
+  transform: translate(3px, 3px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.landing .copy-status {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--signal);
+  min-height: 1.2em;
+}
+
+.landing .command-note {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ash);
+}
+
+/* ── what it reads ────────────────────────────────────────────────────────── */
+
+.landing .section {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 2.5vw, 1.5rem);
+  align-items: flex-start;
+}
+
+.landing .reads {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: clamp(1rem, 3vw, 1.75rem);
+  width: 100%;
+}
+
+.landing .reads .block-head {
+  background: var(--phosphor);
+}
+
+.landing .read-title {
+  font-family: var(--display);
+  font-size: 1.15rem;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.5rem;
+}
+
+.landing .read-body code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  background: var(--phosphor);
+  border: 2px solid var(--ink);
+  padding: 0 0.25em;
+}
+
+/* ── scoring ──────────────────────────────────────────────────────────────── */
+
+.landing .scoring {
+  width: 100%;
+  border: var(--edge);
+  box-shadow: var(--drop);
+  background: var(--paper);
+  border-collapse: collapse;
+}
+
+.landing .scoring caption {
+  text-align: left;
+  padding-bottom: 0.75rem;
+  color: var(--ash);
+  font-size: 0.85rem;
+}
+
+.landing .scoring th,
+.landing .scoring td {
+  border-bottom: 2px solid var(--ink);
+  padding: 0.6rem clamp(0.6rem, 2vw, 1rem);
+  text-align: left;
+}
+
+.landing .scoring thead th {
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.landing .scoring tbody tr:last-child th,
+.landing .scoring tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.landing .scoring tbody th {
+  font-weight: 400;
+}
+
+.landing .scoring .points {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.landing .scoring .points--plus {
+  color: var(--ink);
+}
+
+.landing .scoring .points--zero {
+  color: var(--ash);
+}
+
+.landing .scoring .points--minus {
+  color: var(--ember);
+}
+
+.landing .scoring tbody tr.penalty {
+  background: var(--ember);
+}
+
+.landing .scoring tbody tr.penalty .points--minus {
+  color: var(--ink);
+}
+
+/* ── board ────────────────────────────────────────────────────────────────── */
+
+.landing .season {
+  display: inline-block;
+  border: var(--edge);
+  box-shadow: var(--drop-sm);
+  background: var(--signal);
+  padding: 0.35rem 0.8rem;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.landing .standings {
+  width: 100%;
+  border: var(--edge);
+  box-shadow: var(--drop);
+  background: var(--paper);
+  border-collapse: collapse;
+}
+
+.landing .standings th,
+.landing .standings td {
+  border-bottom: 2px solid var(--ink);
+  padding: 0.6rem clamp(0.5rem, 2vw, 1rem);
+  text-align: left;
+}
+
+.landing .standings thead th {
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.landing .standings tbody tr:last-child th,
+.landing .standings tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.landing .standings .rank {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  width: 3ch;
+}
+
+.landing .standings .builder {
+  font-family: var(--mono);
+  font-weight: 700;
+  word-break: break-all;
+}
+
+.landing .standings .count {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.landing .standings tbody tr:first-child .rank,
+.landing .standings tbody tr:first-child .builder {
+  background: var(--phosphor);
+}
+
+.landing .empty-board {
+  width: 100%;
+  border: var(--edge);
+  box-shadow: var(--drop);
+  background: var(--phosphor);
+  padding: clamp(1rem, 3vw, 1.75rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.landing .empty-board strong {
+  font-family: var(--display);
+  font-size: clamp(1.1rem, 3.5vw, 1.5rem);
+  text-transform: uppercase;
+}
+
+.landing a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 3px;
+}
+
+.landing a:hover {
+  background: var(--phosphor);
+}
+
+.landing .more-link {
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+/* ── footer ───────────────────────────────────────────────────────────────── */
+
+.landing-footer {
+  border-top: var(--edge);
+  padding-top: clamp(1rem, 3vw, 1.5rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  color: var(--ash);
+  font-size: 0.85rem;
+}
+
+.landing-footer p {
+  max-width: 64ch;
+}
+
+/* ── narrow screens ───────────────────────────────────────────────────────── */
+
+@media (max-width: 52rem) {
+  .landing .versus {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 30rem) {
+  .landing {
+    --drop: 5px 5px 0 var(--ink);
+    --drop-sm: 4px 4px 0 var(--ink);
+  }
+
+  .landing .command-row {
+    align-items: stretch;
+  }
+
+  .landing .copy {
+    width: 100%;
+  }
+
+  /* The least load-bearing column goes before a table can crush the ones that
+     carry the argument — the handle and its merges, the outcome and its points.
+     The dropped copy is on the page above in prose either way. */
+  .landing .standings .drop-narrow,
+  .landing .scoring .drop-narrow {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing * {
+    transition: none !important;
+  }
+
+  .landing .copy:hover,
+  .landing .copy:active {
+    transform: none;
+  }
+}
