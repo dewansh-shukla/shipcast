@@ -15,3 +15,6 @@ coverage/
 *.db-wal
 *.db-shm
 !test/fixtures/*.db
+next-env.d.ts
+apps/web/AGENTS.md
+apps/web/CLAUDE.md

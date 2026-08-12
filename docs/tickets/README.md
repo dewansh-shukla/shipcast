@@ -3,39 +3,51 @@
 Numbered by when they run, not by which lane they belong to. Spawn a wave
 together; do not wait for one ticket to merge before starting its neighbours.
 
-| #   | Ticket                | Harness     | Wave | Starts when                     |
-| --- | --------------------- | ----------- | ---- | ------------------------------- |
-| 01  | Schema probe          | claude-code | 1    | now                             |
-| 02  | Database and ingest   | claude-code | 1    | now                             |
-| 03  | Wrapped card          | claude-code | 1    | now                             |
-| 04  | GitHub seeder         | copilot*    | 1    | now                             |
-| 05  | Scoring engine        | claude-code | 2    | 02 is **in flight**, not merged |
-| 06  | Leaderboard           | claude-code | 2    | 03 is **in flight**, not merged |
-| 07  | Replay engine         | claude-code | 3    | 01 merged — **runs with 08**    |
-| 08  | Metrics               | claude-code | 3    | 01 merged — **runs with 07**    |
-| 09  | Terminal card         | claude-code | 4    | 08 merged                       |
-| 10  | Publish / claim flow  | claude-code | 4    | 08 merged                       |
-| 11  | Seed 30+ public repos | claude-code | 4    | 04 merged                       |
+| #   | Ticket               | Harness     | Status     | Notes                           |
+| --- | -------------------- | ----------- | ---------- | ------------------------------- |
+| 01  | Schema probe         | claude-code | **merged** | adapts to any AO version        |
+| 02  | Database and ingest  | claude-code | **merged** | in-memory store, strict zod     |
+| 03  | Wrapped card         | claude-code | **merged** | page + OG image render          |
+| 04  | GitHub seeder        | claude-code | **merged** | demoted to verification only    |
+| 07  | Replay engine        | claude-code | **merged** | change_log → transitions        |
+| 08  | Metrics              | claude-code | **merged** | real payload from real data     |
+| 09  | Terminal card        | claude-code | next       | demo shot 5                     |
+| 10  | Publish / claim flow | claude-code | next       | the only way onto the board     |
+| 12  | Wire card to store   | claude-code | next       | deletes fabricated fallback     |
+| 13  | Fix metric defects   | claude-code | after 09   | graveyard, medianMinutes, sizes |
+| 05  | Scoring engine       | claude-code | if time    | leaderboard arithmetic          |
+| 06  | Leaderboard page     | claude-code | if time    | demo shots 2 and 3              |
+
+Tickets 09, 10 and 12 are independent and run together. 05 and 06 are the first
+things to cut if the clock runs out — the card and the publish flow are the
+product; the ranked board is the upside.
 
 ## Why the waves are shaped this way
 
-Wave 1 is four tickets with genuinely disjoint files, so they run at once. That
+Wave 1 was four tickets with genuinely disjoint files, so they ran at once. That
 is also shot 1 of the demo video — four agents working in parallel is the thing
 this product measures, and peak parallelism only exists while it is happening.
 
-Wave 2 depends on interfaces, not implementations. Scoring needs the payload
-type, which already exists in `packages/shared`; the leaderboard needs a card
-layout it can read from fixtures. Neither needs the other ticket's PR to land,
-so waiting for a merge would waste an hour for nothing.
+Wave 3 looked like a dependency chain and was not one. The `Transition` interface
+already existed in `replay.ts`, so 08 was built against that contract while 07
+implemented it. Running them in parallel saved a round trip we did not have.
 
-Wave 3 looked like a dependency chain and is not one. The `Transition` interface
-already exists in `replay.ts`, so 08 can be built against that contract while 07
-implements it — 08 constructs transition arrays by hand in its tests and never
-needs 07's output. Running them in parallel saves a round trip we do not have.
-The interface is frozen for the duration; whichever session wants it changed
-says so in its PR rather than changing it.
+## Why GitHub stopped being a seeding source
 
-Wave 4 is everything that turns working code into a demo.
+The original design seeded the board from public GitHub merge counts so people
+would appear without installing anything. Two problems killed it.
+
+The people it found were AO's **community contributors** — humans who hand-wrote
+pull requests improving the orchestrator. Ranking them on AI workforce output
+credits their own work to agents.
+
+More fundamentally: from outside, a merged PR looks identical whether an agent
+opened it or a person typed it. A product measuring AI work outcomes cannot use
+an instrument that is blind to the distinction. AO can see it — `pr.session_id`
+joins every PR to the session that produced it.
+
+So the collector is the only ranking input, and GitHub keeps one job:
+verification against forged payloads.
 
 ## Harness assignment
 

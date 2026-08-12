@@ -65,49 +65,46 @@ demonstrates the metric it reports — spend thirty seconds picking them.
 One session each. Files listed are owned exclusively — disjoint ownership is
 what makes parallel sessions merge instead of conflict.
 
-### Lane A · Collector
+### Merged
 
-- [ ] **A1 · schema probe** — `packages/collector/src/probe.ts`
-      `--dump-schema` prints tables, columns, row counts. Missing column disables
-      one metric, never throws. _Blocks A2 and A3._
-- [ ] **A2 · replay engine** — `packages/collector/src/replay.ts`
-      `change_log` ordered by `seq` → typed transition stream. Tests cover an
-      activity change, a `failed`→`passed` CI edge, a conflict resolution.
-- [ ] **A3 · metrics** — `packages/collector/src/metrics.ts`
-      Pure function: transitions in, `IngestPayload` out. Fixture-tested.
-- [ ] **A4 · terminal card** — `packages/collector/src/render.ts`
-      Full card prints offline with no account. Deterministic personalities.
-- [ ] **A5 · publish** — `packages/collector/src/publish.ts`
-      Device-claim flow, token stored under `~/.ao-wrapped/`. `--dry-run` works.
+- [x] **01 · schema probe** — runtime discovery, adapts to any AO version
+- [x] **02 · db + ingest** — strict zod, in-memory store, bearer auth
+- [x] **03 · Wrapped card** — page and OG image render
+- [x] **04 · GitHub seeder** — built, then demoted to verification only
+- [x] **07 · replay engine** — `change_log` → typed transition stream
+- [x] **08 · metrics** — real payload from real data, 108 tests green
 
-### Lane B · API and scoring
+### Next — run these three together
 
-- [ ] **B1 · db + ingest** — `apps/web/db/schema.ts`, `apps/web/app/api/ingest/route.ts`
-      Counters stored, never scores. Unknown key → 400 naming the field.
-- [ ] **B2 · scoring** — `apps/web/lib/score.ts`
-      Weights from `shared` produce score + breakdown. Golden test per anti-gaming rule:
-      repo concentration, rubber-stamp merges, empty sessions, GitHub reconciliation.
+- [ ] **09 · terminal card** — `renderCard` still throws, so `ao-wrapped` prints nothing.
+      This is demo shot 5.
+- [ ] **10 · publish and claim** — the _only_ way anyone gets on the board now that
+      GitHub seeding is gone. Product's front door.
+- [ ] **12 · wire card to store** — and delete `seededMergeCount`, which hashes a
+      username into a merge count and labels it public GitHub data.
 
-### Lane C · Surfaces
+### After
 
-- [ ] **C1 · leaderboard** — `apps/web/app/board/`
-      Both boards render, rows expand into arithmetic, locked column on unconnected rows.
-- [ ] **C2 · card** — `apps/web/app/w/[handle]/`
-      OG PNG from stored counters; unfurls correctly on X and LinkedIn.
+- [ ] **13 · fix metric defects** found in the first real run (see below)
+- [ ] **05 · scoring engine** — cut first if the clock runs out
+- [ ] **06 · leaderboard page** — cut second
 
-### Lane D · Data and story
+### Defects found in the first real payload
 
-- [ ] **D1 · GitHub seeder** — `scripts/seed-github.ts`
-      Repo list in, merged-PR counts and diff sizes out.
-- [ ] **D2 · seed 30+ real repos** — including AO maintainers and other teams
-      An empty leaderboard reads as a dead product regardless of card quality.
+Measured 2026-08-13 against a live AO v0.12.3 install:
+
+- [ ] `graveyard` is empty while `outcomes.died` is 2 — dead sessions counted, none emitted
+- [ ] `medianMinutes` reads 558 — wall-clock including overnight idle, not work time
+- [ ] `turns` always 0 — `conversation_turns` is unpopulated for TUI-mode sessions
+- [ ] `sizeMix`, `repos`, `topRepoShare` all 0 — `Transition` carries no diff sizes (known TODO)
 
 ## Phase 3 · Data generation
 
 Your own build is the dataset. The probed install had 4 sessions and 0 merges,
 so none of this exists until you make it exist.
 
-- [ ] CI failing and being fixed by an agent, unassisted (**the headline metric**)
+- [ ] CI failing and being fixed by an agent, unassisted (**the headline metric** —
+      still blocked by the Actions billing lock; `ciRecoveries` reads 0 until it clears)
 - [ ] At least one merge conflict resolved by an agent
 - [ ] At least one review round resolved by an agent
 - [ ] 4+ concurrent sessions captured on video
@@ -136,7 +133,8 @@ Rule 7 requires visible AO Kanban / orchestrator footage. Target 2:30.
 ## Phase 5 · Submission — before 7:00 PM, Aug 13
 
 - [ ] Public GitHub repo with README carrying metrics table and privacy schema
-- [ ] Live board URL with real seeded rows
+- [ ] Live board URL with real rows — ask Discord to run `npx ao-wrapped --publish`;
+      that is now the only way anyone appears
 - [ ] Demo video uploaded and publicly viewable
 - [ ] Discord post in `#orchestra-project-showcase` — team name, project name,
       description, repo, live link, video
@@ -154,5 +152,7 @@ If time runs out, cut in this order and say so out loud rather than shipping bro
 3. Mobile polish
 4. `npm publish` of the collector
 5. Cost-per-merge board
+6. Tickets 05 and 06 — the ranked board. The card and the publish flow are the
+   product; ranking is upside.
 
 The card, the leaderboard and the privacy shot are the product. Everything else is garnish.
