@@ -26,7 +26,9 @@ function payloadFor(handle: string): IngestPayload {
     handle,
     aoVersion: "0.12.3",
     collectorVersion: "0.1.0",
-    window: { from: "2026-08-01", to: "2026-08-13" },
+    // A single ISO week (2026-W33). Ingest rejects windows spanning more than
+    // one week, because a season is the unit a snapshot is keyed by.
+    window: { from: "2026-08-10", to: "2026-08-16" },
     totals: {
       tasks: 4,
       merges: 2,
