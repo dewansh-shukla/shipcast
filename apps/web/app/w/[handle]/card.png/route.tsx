@@ -2,13 +2,14 @@ import type { ReactNode } from "react";
 import { ImageResponse } from "next/og";
 import type { AgentStats } from "@ao-wrapped/shared";
 import {
+  CONNECT_COMMAND,
   formatCount,
   formatWindow,
   getWrappedCard,
   PALETTE,
   personalitiesFor,
   type ConnectedCard,
-  type SeededCard,
+  type UnconnectedCard,
 } from "../card-data.ts";
 
 /**
@@ -89,11 +90,11 @@ export async function GET(
         <div style={{ display: "flex", fontSize: 24, color: PALETTE.ash, marginTop: 12 }}>
           {card.state === "connected"
             ? "Collector connected"
-            : "Seeded from public GitHub · merges only"}
+            : "Not on the board yet · only collector-reported work is ranked"}
         </div>
       </div>
 
-      {card.state === "connected" ? <ConnectedBody card={card} /> : <SeededBody card={card} />}
+      {card.state === "connected" ? <ConnectedBody card={card} /> : <UnconnectedBody />}
     </div>,
     {
       ...size,
@@ -120,7 +121,10 @@ function ConnectedBody({ card }: { card: ConnectedCard }) {
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
       <div style={{ display: "flex", height: BAND.main, paddingTop: 12 }}>
-        <Headline value={totals.merges} note={`out of ${formatCount(totals.tasks)} tasks`} />
+        <Headline
+          value={formatCount(totals.merges)}
+          note={`out of ${formatCount(totals.tasks)} tasks`}
+        />
         <div style={{ display: "flex", flexDirection: "column", flexGrow: 1 }}>
           <div style={{ display: "flex" }}>
             <Stat label="CI recoveries" value={totals.ciRecoveries} color={PALETTE.signal} />
@@ -147,11 +151,16 @@ function ConnectedBody({ card }: { card: ConnectedCard }) {
   );
 }
 
-function SeededBody({ card }: { card: SeededCard }) {
+/**
+ * No counters, because there are none — a handle only has numbers once its
+ * owner published them. An em dash where the figure goes says that without
+ * inventing anything to put there.
+ */
+function UnconnectedBody() {
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
       <div style={{ display: "flex", height: BAND.main, paddingTop: 12 }}>
-        <Headline value={card.merges} note="from public pull requests" />
+        <Headline value="—" note="nothing published yet" color={PALETTE.edge} />
         <div style={{ display: "flex", flexDirection: "column", flexGrow: 1 }}>
           <div style={{ display: "flex" }}>
             <LockedStat label="CI recoveries" />
@@ -181,7 +190,7 @@ function SeededBody({ card }: { card: SeededCard }) {
       <Footer>
         <div style={{ display: "flex", alignItems: "center", fontSize: 25 }}>
           <div style={{ display: "flex", color: PALETTE.ash }}>
-            Locked · measured on your machine, never by GitHub
+            Measured on your machine, never guessed from GitHub
           </div>
           <div
             style={{
@@ -192,7 +201,7 @@ function SeededBody({ card }: { card: SeededCard }) {
               border: `1px solid ${PALETTE.edge}`,
             }}
           >
-            npx ao-wrapped
+            {CONNECT_COMMAND}
           </div>
         </div>
       </Footer>
@@ -200,7 +209,7 @@ function SeededBody({ card }: { card: SeededCard }) {
   );
 }
 
-function Headline({ value, note }: { value: number; note: string }) {
+function Headline({ value, note, color }: { value: string; note: string; color?: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", width: 420 }}>
       <Label>MERGES</Label>
@@ -210,10 +219,10 @@ function Headline({ value, note }: { value: number; note: string }) {
           fontSize: 150,
           lineHeight: 1,
           letterSpacing: -6,
-          color: PALETTE.phosphor,
+          color: color ?? PALETTE.phosphor,
         }}
       >
-        {formatCount(value)}
+        {value}
       </div>
       <div style={{ display: "flex", fontSize: 24, color: PALETTE.ash, marginTop: 14 }}>{note}</div>
     </div>
