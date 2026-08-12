@@ -45,7 +45,7 @@ exports[`snapshots > renders a card whose agents landed more than one merge per 
 ├──────────────────────────────────────────────────────────┤
 │                                                          │
 │  Measured here, from a read-only pass over AO's own      │
-│  database. No code, diffs, repo names or prompts were    │
+│  telemetry. No code, diffs, repo names or prompts were   │
 │  read at all.                                            │
 │                                                          │
 │  Run  ao-wrapped --publish  to put these counters on     │
@@ -109,7 +109,7 @@ exports[`snapshots > renders a populated multi-harness card 1`] = `
 ├──────────────────────────────────────────────────────────┤
 │                                                          │
 │  Measured here, from a read-only pass over AO's own      │
-│  database. No code, diffs, repo names or prompts were    │
+│  telemetry. No code, diffs, repo names or prompts were   │
 │  read at all.                                            │
 │                                                          │
 │  Run  ao-wrapped --publish  to put these counters on     │
@@ -166,7 +166,7 @@ exports[`snapshots > renders our own first real card 1`] = `
 ├──────────────────────────────────────────────────────────┤
 │                                                          │
 │  Measured here, from a read-only pass over AO's own      │
-│  database. No code, diffs, repo names or prompts were    │
+│  telemetry. No code, diffs, repo names or prompts were   │
 │  read at all.                                            │
 │                                                          │
 │  Run  ao-wrapped --publish  to put these counters on     │
@@ -219,7 +219,7 @@ exports[`snapshots > renders the all-zeros card 1`] = `
 ├──────────────────────────────────────────────────────────┤
 │                                                          │
 │  Measured here, from a read-only pass over AO's own      │
-│  database. No code, diffs, repo names or prompts were    │
+│  telemetry. No code, diffs, repo names or prompts were   │
 │  read at all.                                            │
 │                                                          │
 │  Run  ao-wrapped --publish  to put these counters on     │
@@ -282,7 +282,7 @@ exports[`unmeasured versus zero > renders the unmeasured card 1`] = `
 ├──────────────────────────────────────────────────────────┤
 │                                                          │
 │  Measured here, from a read-only pass over AO's own      │
-│  database. No code, diffs, repo names or prompts were    │
+│  telemetry. No code, diffs, repo names or prompts were   │
 │  read at all.                                            │
 │                                                          │
 │  Run  ao-wrapped --publish  to put these counters on     │
