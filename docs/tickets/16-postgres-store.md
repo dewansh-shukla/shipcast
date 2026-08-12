@@ -9,9 +9,31 @@ process memory, so on serverless it evaporates between invocations and a redeplo
 wipes it regardless. Continuous sync (ticket 14) writes constantly into that void.
 This ticket makes the data survive.
 
-Neon Postgres is provisioned; tables exist from `db:push`. `DATABASE_URL` is a
+Neon Postgres is provisioned and the four tables exist. `DATABASE_URL` is a
 **pooled** connection — serverless opens and drops connections constantly, and
 without the pooler you exhaust Postgres connections under any real traffic.
+
+## Two things verified against the real database, do not rediscover them
+
+**`prepare: false` is mandatory.** Neon's pooled endpoint runs PgBouncer in
+transaction mode, which does not support session-level prepared statements.
+Without it every query dies with:
+
+```
+bind message supplies 0 parameters, but prepared statement "PGBOUNCER_2" requires 1
+```
+
+Confirmed by connecting to the live database — with the flag it works, without it
+nothing does.
+
+**Connection options that work:**
+
+```ts
+postgres(process.env.DATABASE_URL!, { ssl: "require", prepare: false });
+```
+
+`channel_binding=require` was stripped from the URL; `postgres.js` does not
+understand it. Do not add it back.
 
 ## Work
 
