@@ -1,0 +1,16 @@
+{
+  "name": "@ao-wrapped/collector",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "ao-wrapped": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "dev": "node --experimental-strip-types src/index.ts"
+  },
+  "dependencies": {
+    "@ao-wrapped/shared": "*"
+  }
+}

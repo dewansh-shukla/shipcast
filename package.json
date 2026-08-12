@@ -1,0 +1,28 @@
+{
+  "name": "ao-wrapped",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Spotify Wrapped for your AI coding workforce, powered by Agent Orchestrator telemetry.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "collector": "node --experimental-strip-types packages/collector/src/index.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3",
+    "vitest": "^3.2.7"
+  }
+}
