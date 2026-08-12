@@ -19,9 +19,29 @@ Agents branch off this. It has to be green before anyone spawns a session.
 - [x] `apps/web` — Next.js skeleton + stub routes
 - [x] GitHub Actions CI — typecheck, test, format
 - [x] README with metric-derivation table and privacy schema
-- [ ] `npm install` clean, `npm test` green, `npm run typecheck` green
-- [ ] Base commit pushed to `main`
-- [ ] CI green on `main` (**blocking** — a red base blocks every agent)
+- [x] `npm install` clean, `npm test` green (8), `npm run typecheck` green (3 workspaces), 0 vulnerabilities
+- [x] Base commit pushed to `main`
+- [ ] **BLOCKED** — CI green on `main`
+      GitHub Actions is refusing to start jobs: _"The job was not started because your
+      account is locked due to a billing issue."_ All three jobs fail in 3s with zero
+      steps; the code itself is green locally. Until this clears there are no check runs,
+      which means no `pr_checks` rows, which means **the CI-recovery metric has no data**.
+      Resolve at https://github.com/settings/billing, or fall back to a self-hosted
+      runner (see below).
+
+### Fallback if billing cannot be cleared
+
+A self-hosted runner produces real check runs with no billing involved, and is
+faster than hosted runners for this workload.
+
+- [ ] `gh api repos/:owner/:repo/actions/runners/registration-token` → register runner
+- [ ] Add `runs-on: self-hosted` to `.github/workflows/ci.yml`
+- [ ] Confirm check runs appear on a PR, and therefore in AO's `pr_checks`
+
+Caveat worth knowing: a self-hosted runner on a **public** repo will execute code
+from any outside pull request. Acceptable for a two-day repo nobody else is
+sending PRs to; not a pattern to keep afterwards. Deregister the runner when the
+hackathon ends.
 
 ## Phase 1 · AO setup
 
