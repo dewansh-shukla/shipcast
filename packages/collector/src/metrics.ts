@@ -1,4 +1,5 @@
 import {
+  OBSERVABLE_METRICS,
   OUTCOMES,
   SIZE_BUCKETS,
   type AgentStats,
@@ -6,6 +7,7 @@ import {
   type GraveyardEntry,
   type Harness,
   type IngestPayload,
+  type ObservableMetric,
   type Outcome,
 } from "@ao-wrapped/shared";
 import type { SchemaProbe } from "./probe.ts";
@@ -31,6 +33,12 @@ import type { Transition } from "./replay.ts";
  *   outcomes         one per session, by the precedence in OUTCOMES
  *   graveyard        sessions ending with no merge; cause from the last
  *                    PR-related transition
+ *   observed         which of the above this install had a source for at all
+ *
+ * `observed` is the one output here that is not a count. A zero that means
+ * "unmeasured" is the one kind of dishonesty that looks like precision, so
+ * every counter is emitted unchanged and this set says which of them are
+ * claims about agents rather than claims about an empty table.
  *
  * The result must satisfy IngestPayloadSchema. If it does not, that is a bug
  * here and not a reason to relax the schema.
@@ -62,6 +70,28 @@ const MAX_GRAVEYARD = 100;
 
 /** Grouping key for PR-side events replay could not attribute to a session. */
 const UNATTRIBUTED = "<unattributed>";
+
+/**
+ * The table each derivable metric answers to. A metric is observed when that
+ * table holds rows, not merely when it exists: `pr_checks` present but empty
+ * means CI recovery was not measurable here, whatever the schema says. That is
+ * the real case this exists for — GitHub Actions is billing-locked on the
+ * account building this, so no check ever ran and `ciRecoveries` is 0 for a
+ * reason that has nothing to do with the agents.
+ *
+ * `turns`, `repos`, `sizeMix` and `tokens` are deliberately absent from this
+ * list. `Transition` carries none of them, so no table makes them derivable
+ * here and they are never observed — the zero beside them in `totals` is a
+ * placeholder the schema requires, not a measurement anyone took.
+ */
+const METRIC_SOURCE: ReadonlyArray<readonly [ObservableMetric, string]> = [
+  ["tasks", "sessions"],
+  ["harnesses", "sessions"],
+  ["merges", "pr"],
+  ["ciRecoveries", "pr_checks"],
+  ["interventions", "change_log"],
+  ["peakParallelism", "change_log"],
+];
 
 const PR_KINDS = new Set<Transition["kind"]>([
   "pr_state",
@@ -216,7 +246,25 @@ export function computeMetrics(input: MetricsInput): IngestPayload {
     topRepoShare: 0,
     agents: agentStats(sessions, perSessionOutcome),
     graveyard: graveyard.slice(0, MAX_GRAVEYARD),
+    observed: observedMetrics(probe),
   };
+}
+
+/**
+ * Emitted in OBSERVABLE_METRICS order and never repeating, so two runs over the
+ * same install produce the same array and the schema's uniqueness check cannot
+ * be tripped by the order sources happen to be listed in above.
+ */
+function observedMetrics(probe: SchemaProbe): ObservableMetric[] {
+  const sourced = new Set(
+    METRIC_SOURCE.filter(([, table]) => hasRows(probe, table)).map(([metric]) => metric),
+  );
+  return OBSERVABLE_METRICS.filter((metric) => sourced.has(metric));
+}
+
+/** Rows, not existence. An empty table measured nothing. */
+function hasRows(probe: SchemaProbe, table: string): boolean {
+  return (probe.tables.get(table)?.rowCount ?? 0) > 0;
 }
 
 /**

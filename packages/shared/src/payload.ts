@@ -16,6 +16,28 @@ import { DEATH_CAUSES, OUTCOMES, SIZE_BUCKETS } from "./outcomes.ts";
 
 const count = z.number().int().min(0).max(100_000);
 
+/**
+ * Metrics a collector can report on, as a closed vocabulary.
+ *
+ * A counter alone cannot say whether it measured nothing or measured no data.
+ * `CI recoveries 0` reads the same whether agents recovered from nothing or no
+ * CI ever ran — opposite facts sharing a glyph. `observed` below carries the
+ * difference, and this list keeps it a whitelist: metric names only, never a
+ * free string that could smuggle a repo or a path past the schema.
+ */
+export const OBSERVABLE_METRICS = [
+  "tasks",
+  "merges",
+  "ciRecoveries",
+  "interventions",
+  "peakParallelism",
+  "harnesses",
+  "turns",
+  "repos",
+  "sizeMix",
+  "tokens",
+] as const;
+
 export const AgentStatsSchema = z
   .object({
     harness: z.enum(HARNESSES),
@@ -74,9 +96,29 @@ export const IngestPayloadSchema = z
     topRepoShare: z.number().min(0).max(1),
     agents: z.array(AgentStatsSchema).max(30),
     graveyard: z.array(GraveyardEntrySchema).max(100),
+
+    /**
+     * The metrics this install actually had a data source for. A counter whose
+     * metric is missing here is *unmeasured*, not zero, and a reader is
+     * entitled to be told which one it is looking at.
+     *
+     * Optional on purpose. `schema` is pinned at 1 and collectors ship by
+     * `npx`, so a required field would 400 every already-installed collector.
+     * Absent means "this collector did not report observability" and the
+     * counters are read at face value, exactly as before; an empty array is a
+     * different and much stronger claim — nothing here was measurable.
+     */
+    observed: z
+      .array(z.enum(OBSERVABLE_METRICS))
+      .max(OBSERVABLE_METRICS.length)
+      .refine((metrics) => new Set(metrics).size === metrics.length, {
+        message: "observed must not repeat a metric",
+      })
+      .optional(),
   })
   .strict();
 
+export type ObservableMetric = (typeof OBSERVABLE_METRICS)[number];
 export type IngestPayload = z.infer<typeof IngestPayloadSchema>;
 export type AgentStats = z.infer<typeof AgentStatsSchema>;
 export type GraveyardEntry = z.infer<typeof GraveyardEntrySchema>;

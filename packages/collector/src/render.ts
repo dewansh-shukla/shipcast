@@ -1,4 +1,10 @@
-import type { AgentStats, DeathCause, GraveyardEntry, IngestPayload } from "@ao-wrapped/shared";
+import type {
+  AgentStats,
+  DeathCause,
+  GraveyardEntry,
+  IngestPayload,
+  ObservableMetric,
+} from "@ao-wrapped/shared";
 
 /**
  * TICKET A4 — terminal card.
@@ -17,10 +23,11 @@ import type { AgentStats, DeathCause, GraveyardEntry, IngestPayload } from "@ao-
  *
  * The card claims only what the payload can support. Awards compare harnesses
  * against each other, so a window with one harness earns no awards and says so.
- * `turns` and `repos` are not measured yet and are omitted rather than printed
- * as a confident zero. Counters that genuinely are zero — no CI recovery, an
- * empty graveyard — print as zero with copy that reads as a fact rather than a
- * failure.
+ * A counter whose metric is missing from `payload.observed` had no data source
+ * at all, and prints as `—` with the reason rather than as a `0` that would
+ * read as "your agents fixed nothing". Counters that genuinely are zero — CI
+ * ran and nothing needed recovering, an empty graveyard — print as zero with
+ * copy that reads as a fact rather than a failure.
  */
 
 export interface RenderOptions {
@@ -150,6 +157,39 @@ class Card {
   }
 }
 
+/** What the card prints where a number would go, when there was no source. */
+const NOT_MEASURED = "—";
+
+/**
+ * Why a metric is blank, in the reader's terms rather than the schema's. Short
+ * enough to sit under the grid; specific enough that "no CI ran here" cannot be
+ * mistaken for "your agents fixed nothing".
+ */
+const UNOBSERVED_REASON: Record<ObservableMetric, string> = {
+  tasks: "AO recorded no sessions",
+  merges: "AO recorded no pull requests",
+  ciRecoveries: "AO recorded no CI checks",
+  interventions: "no change log to replay",
+  peakParallelism: "no change log to replay",
+  harnesses: "AO recorded no sessions",
+  turns: "AO records no turns for TUI-mode sessions",
+  repos: "the collector does not derive this yet",
+  sizeMix: "the collector does not derive this yet",
+  tokens: "the collector does not derive this yet",
+};
+
+/**
+ * A payload from a collector too old to report `observed` makes no claim either
+ * way, so its counters are read at face value exactly as before. An empty array
+ * is the opposite: a collector that looked and found no source for anything.
+ */
+function observedIn(payload: IngestPayload): (metric: ObservableMetric) => boolean {
+  const { observed } = payload;
+  if (observed === undefined) return () => true;
+  const set = new Set(observed);
+  return (metric) => set.has(metric);
+}
+
 export function renderCard(payload: IngestPayload, options: RenderOptions = {}): string {
   const width = options.width ?? DEFAULT_WIDTH;
   const paint = painter(colorEnabled(options));
@@ -192,50 +232,99 @@ function header(card: Card, payload: IngestPayload): void {
   card.line();
 }
 
+/** The stat grid, in reading order. `metric` is what decides `—` versus a number. */
+const TOTAL_STATS: ReadonlyArray<{
+  label: string;
+  metric: ObservableMetric;
+  ink: Ink;
+  of: (t: IngestPayload["totals"]) => number;
+}> = [
+  { label: "CI recoveries", metric: "ciRecoveries", ink: "signal", of: (t) => t.ciRecoveries },
+  { label: "Interventions", metric: "interventions", ink: "ember", of: (t) => t.interventions },
+  { label: "Peak parallel", metric: "peakParallelism", ink: "bone", of: (t) => t.peakParallelism },
+  { label: "Harnesses", metric: "harnesses", ink: "bone", of: (t) => t.harnesses },
+  { label: "Turns", metric: "turns", ink: "bone", of: (t) => t.turns },
+  { label: "Repos", metric: "repos", ink: "bone", of: (t) => t.repos },
+];
+
 function totals(card: Card, payload: IngestPayload): void {
   const { totals: t } = payload;
+  const observed = observedIn(payload);
+
   card.line();
-  card.line(card.paint("phosphor", card.paint("bold", `${formatCount(t.merges)} merges`)));
+  card.line(
+    card.paint(
+      "phosphor",
+      card.paint("bold", observed("merges") ? `${formatCount(t.merges)} merges` : "— merges"),
+    ),
+  );
   card.prose(
-    t.tasks === 0
-      ? "No tasks ran in this window."
-      : `out of ${formatCount(t.tasks)} tasks handed to agents (${percent(t.merges, t.tasks)} closed)`,
+    !observed("merges")
+      ? `Not measured here — ${UNOBSERVED_REASON.merges}.`
+      : t.tasks === 0
+        ? "No tasks ran in this window."
+        : `out of ${formatCount(t.tasks)} tasks handed to agents (${percent(t.merges, t.tasks)} closed)`,
   );
   card.line();
 
-  // `turns` and `repos` are in the payload but nothing measures them yet, so a
-  // printed 0 would claim a measurement no one took. Shown only once real.
-  const stats: Array<[string, number, Ink]> = [
-    ["CI recoveries", t.ciRecoveries, "signal"],
-    ["Interventions", t.interventions, "ember"],
-    ["Peak parallel", t.peakParallelism, "bone"],
-    ["Harnesses", t.harnesses, "bone"],
-  ];
-  if (t.turns > 0) stats.push(["Turns", t.turns, "bone"]);
-  if (t.repos > 0) stats.push(["Repos", t.repos, "bone"]);
+  // An unobserved stat still gets its cell: the blank is the finding, and
+  // dropping the row would hide it. A payload predating `observed` keeps the
+  // old rule instead, where turns and repos are omitted while they read zero.
+  const legacy = payload.observed === undefined;
+  const stats = TOTAL_STATS.filter((stat) => {
+    if (!legacy) return true;
+    return stat.metric === "turns" || stat.metric === "repos" ? stat.of(t) > 0 : true;
+  });
 
   const gap = 2;
   const cellWidth = Math.floor((card.inner - gap) / 2);
   const valueWidth = 5;
   for (let i = 0; i < stats.length; i += 2) {
-    const cells = stats.slice(i, i + 2).map(([label, value, ink]) => {
-      const shown =
-        padRight(label, cellWidth - valueWidth) +
-        padLeft(card.paint(ink, formatCount(value)), valueWidth);
+    const cells = stats.slice(i, i + 2).map((stat) => {
+      const value = observed(stat.metric)
+        ? card.paint(stat.ink, formatCount(stat.of(t)))
+        : card.paint("dim", NOT_MEASURED);
+      const shown = padRight(stat.label, cellWidth - valueWidth) + padLeft(value, valueWidth);
       return padRight(shown, cellWidth);
     });
     card.line(cells.join(" ".repeat(gap)));
   }
+
+  const blank = stats.filter((stat) => !observed(stat.metric));
+  if (blank.length > 0) {
+    card.line();
+    card.prose(`${NOT_MEASURED} is not zero. This install had no source for:`);
+    for (const stat of blank) {
+      // Wrapped rather than truncated: a reason cut off at "so none co..." is
+      // exactly the kind of half-claim this whole section exists to remove.
+      for (const line of wrap(
+        `${stat.label} — ${UNOBSERVED_REASON[stat.metric]}`,
+        card.inner - 2,
+      )) {
+        card.line(card.paint("dim", `  ${line}`));
+      }
+    }
+  }
   card.line();
 }
 
-const CREW_COLUMNS = [
-  { header: "tasks", width: 6, of: (a: AgentStats) => formatCount(a.tasks) },
-  { header: "merged", width: 7, of: (a: AgentStats) => formatCount(a.merges) },
-  { header: "ci saves", width: 9, of: (a: AgentStats) => formatCount(a.recoveries) },
-  { header: "died", width: 6, of: (a: AgentStats) => formatCount(a.died) },
-  { header: "median", width: 9, of: (a: AgentStats) => formatDuration(a.medianMinutes) },
-] as const;
+/**
+ * `metric` names the payload-level source a column depends on, or null when the
+ * column is derived from the session rows themselves. A per-agent counter is as
+ * unmeasured as the total above it, so the column blanks with the same glyph.
+ */
+const CREW_COLUMNS: ReadonlyArray<{
+  header: string;
+  width: number;
+  metric: ObservableMetric | null;
+  of: (a: AgentStats) => string;
+}> = [
+  { header: "tasks", width: 6, metric: "tasks", of: (a) => formatCount(a.tasks) },
+  { header: "merged", width: 7, metric: "merges", of: (a) => formatCount(a.merges) },
+  { header: "ci saves", width: 9, metric: "ciRecoveries", of: (a) => formatCount(a.recoveries) },
+  { header: "died", width: 6, metric: null, of: (a) => formatCount(a.died) },
+  { header: "median", width: 9, metric: null, of: (a) => formatDuration(a.medianMinutes) },
+];
 
 /** Busiest first, then most merges, then name — never database order. */
 function rankAgents(agents: readonly AgentStats[]): AgentStats[] {
@@ -261,8 +350,15 @@ function crew(card: Card, payload: IngestPayload): void {
     CREW_COLUMNS.map((column) => padLeft(column.header, column.width)).join("");
   card.line(card.paint("dim", head));
 
+  const observed = observedIn(payload);
   for (const agent of rankAgents(payload.agents)) {
-    const cells = CREW_COLUMNS.map((column) => padLeft(column.of(agent), column.width)).join("");
+    const cells = CREW_COLUMNS.map((column) => {
+      const cell =
+        column.metric !== null && !observed(column.metric)
+          ? card.paint("dim", NOT_MEASURED)
+          : column.of(agent);
+      return padLeft(cell, column.width);
+    }).join("");
     card.line(
       padRight(card.paint("bone", truncate(agent.harness, nameWidth - 1)), nameWidth) + cells,
     );
