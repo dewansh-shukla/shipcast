@@ -103,8 +103,10 @@ Measured 2026-08-13 against a live AO v0.12.3 install:
 Your own build is the dataset. The probed install had 4 sessions and 0 merges,
 so none of this exists until you make it exist.
 
-- [ ] CI failing and being fixed by an agent, unassisted (**the headline metric** —
-      still blocked by the Actions billing lock; `ciRecoveries` reads 0 until it clears)
+- [x] ~~CI failing and being fixed by an agent~~ — **abandoned.** GitHub Actions is
+      billing-locked at the account level and support will not resolve it before the
+      deadline. Ticket 18 makes the card report CI recovery as unmeasured rather than
+      zero, which is the honest outcome. The demo leads on autonomy instead.
 - [ ] At least one merge conflict resolved by an agent
 - [ ] At least one review round resolved by an agent
 - [ ] 4+ concurrent sessions captured on video
@@ -126,7 +128,8 @@ Rule 7 requires visible AO Kanban / orchestrator footage. Target 2:30.
 - [ ] 5 · Connect — `npx ao-wrapped`, full card prints locally, offline
 - [ ] 6 · Privacy shot — `--dry-run`, whole JSON on one screen
 - [ ] 7 · Unlock — publish, refresh, card fills in
-- [ ] 8 · The mechanism — ten seconds on `change_log`
+- [ ] 8 · The mechanism — ten seconds on `change_log`, and one honest line about
+      why CI recoveries reads "not measured here"
 - [ ] 9 · Closer — AO Wrapped's own Wrapped, beside the AO board
 - [ ] Edited, under 3 minutes, uploaded, link works in an incognito window
 
