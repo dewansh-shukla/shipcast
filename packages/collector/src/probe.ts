@@ -85,7 +85,7 @@ export function formatSchemaDump(probe: SchemaProbe): string {
 
   const tables = [...probe.tables.values()].sort((a, b) => a.name.localeCompare(b.name));
   if (tables.length === 0) {
-    lines.push("  (no tables — is this an AO database?)");
+    lines.push("  (no tables — is this AO telemetry?)");
   }
   const nameWidth = Math.max(0, ...tables.map((t) => t.name.length));
   for (const table of tables) {

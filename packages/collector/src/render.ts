@@ -575,7 +575,7 @@ function graveyard(card: Card, payload: IngestPayload): void {
 function footer(card: Card): void {
   card.line();
   card.prose(
-    "Measured here, from a read-only pass over AO's own database. No code, diffs, repo names or prompts were read at all.",
+    "Measured here, from a read-only pass over AO's own telemetry. No code, diffs, repo names or prompts were read at all.",
   );
   card.line();
   card.prose("Run  ao-wrapped --publish  to put these counters on the board.", "dim");

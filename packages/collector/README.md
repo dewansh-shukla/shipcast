@@ -2,7 +2,7 @@
 
 **Spotify Wrapped for your AI coding workforce.**
 
-Reads the [Agent Orchestrator](https://aoagents.dev) database already sitting on
+Reads the [Agent Orchestrator](https://aoagents.dev) telemetry already sitting on
 your disk and prints what your agents actually did — merges, CI recoveries, how
 often they needed you, how many ran at once.
 
@@ -42,13 +42,13 @@ That prints the exact JSON publishing would send, and exits.
 --handle <name>        your GitHub handle
 --from <YYYY-MM-DD>    window start (default: 30 days ago)
 --to <YYYY-MM-DD>      window end (default: today)
---db <path>            override the AO database location
+--db <path>            override the AO telemetry location
 --dump-schema          print the AO schema this install exposes
 --dry-run              print the payload instead of sending it
 --publish              send counters to the board (opt-in, always)
 ```
 
-The AO database is opened **read-only**. Nothing is ever written back to it.
+AO's telemetry is opened **read-only**. Nothing is ever written back to it.
 
 Requires Node 22.5 or newer. Apache-2.0.
 Source: https://github.com/dewansh-shukla/shipcast

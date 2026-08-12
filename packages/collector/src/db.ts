@@ -33,7 +33,7 @@ export function resolveDbPath(): string {
 export function openAoDatabase(dbPath = resolveDbPath()): OpenResult {
   if (!existsSync(dbPath)) {
     throw new Error(
-      `No AO database at ${dbPath}. Is Agent Orchestrator installed? ` +
+      `No AO telemetry at ${dbPath}. Is Agent Orchestrator installed? ` +
         `Set AO_DATA_DIR if it lives somewhere else.`,
     );
   }

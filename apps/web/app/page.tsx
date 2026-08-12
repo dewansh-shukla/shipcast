@@ -24,7 +24,7 @@ import "./landing.css";
  * Two things are load-bearing and easy to break later.
  *
  * The example numbers are real. They come from an actual `ao-wrapped --dry-run`
- * against this project's own AO database, so the page cannot be caught lying
+ * against this project's own AO telemetry, so the page cannot be caught lying
  * about its own product. If they are ever refreshed, refresh them from a real
  * run and move the date with them.
  *
@@ -39,7 +39,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "AO Wrapped · the AI flex, with receipts",
   description:
-    "Everyone says AI made them 10x faster. AO Wrapped reads your own AO database and prints what your agents actually did — merges, nudges, and the sessions that died.",
+    "Everyone says AI made them 10x faster. AO Wrapped reads your own AO telemetry and prints what your agents actually did — merges, nudges, and the sessions that died.",
 };
 
 /**
@@ -141,7 +141,7 @@ function Hero() {
       </h1>
 
       <p className="lede">
-        AO Wrapped reads the Agent Orchestrator database already sitting on your disk and prints
+        AO Wrapped reads the Agent Orchestrator telemetry already sitting on your disk and prints
         what your agents actually did. Every merge is joined to the session that produced it, which
         is the one thing a screenshot cannot fake.
       </p>
@@ -225,7 +225,7 @@ function WhatItReads() {
       </h2>
       <div className="reads">
         <article className="block">
-          <h3 className="block-head">your AO database</h3>
+          <h3 className="block-head">your AO telemetry</h3>
           <div className="block-body read-body">
             <p className="read-title">Read-only, on your machine</p>
             <p>

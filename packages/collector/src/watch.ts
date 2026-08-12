@@ -40,7 +40,7 @@ import {
  * Two design choices worth stating, because both are load-bearing:
  *
  * **The stream is a trigger, not a source.** Every publish recomputes the whole
- * week from the AO database through the same `replay` → `computeMetrics` path a
+ * week from AO telemetry through the same `replay` → `computeMetrics` path a
  * one-shot run uses. There is no second implementation of transition derivation
  * here, and no incremental counter that could drift out of step with the
  * one-shot card.
@@ -99,7 +99,7 @@ export interface WatchOptions {
   now?: () => Date;
   /** Stops the watcher. `stop` uses SIGTERM; tests use this. */
   signal?: AbortSignal;
-  /** Builds the payload for a window. Defaults to reading the AO database. */
+  /** Builds the payload for a window. Defaults to reading AO telemetry. */
   snapshotFor?: (window: WeekWindow, handle: string) => IngestPayload;
   /** Injected so tests never touch the network. */
   publishImpl?: (payload: IngestPayload, api: string) => Promise<string>;
@@ -228,7 +228,7 @@ function windowDates(week: WeekWindow): { from: Date; to: Date } {
 }
 
 /**
- * Reads the AO database and derives one week's payload — the same path a
+ * Reads AO telemetry and derives one week's payload — the same path a
  * one-shot `ao-wrapped` run takes, deliberately.
  *
  * The handle is opened and closed per snapshot: a process that lives for days
@@ -570,7 +570,7 @@ class Watcher {
     try {
       payload = deps.snapshotFor(week, deps.handle);
     } catch (error) {
-      deps.write(`${stamp(deps.now())} could not read the AO database (${describe(error)})\n`);
+      deps.write(`${stamp(deps.now())} could not read AO telemetry (${describe(error)})\n`);
       return;
     }
 

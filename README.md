@@ -19,7 +19,7 @@ AO Wrapped produces two things:
 - **A leaderboard** — everyone who connected the collector, ranked by an Orchestrator Score that
   weights autonomy over volume.
 
-Both are built from one source: the local collector reading AO's own database.
+Both are built from one source: the local collector reading AO's own telemetry.
 
 ## What it measures
 
@@ -55,7 +55,7 @@ last-known state per entity and emitting an edge on every change.
 
 ## Privacy
 
-The collector reads a local AO database and sends **only derived numbers**. Code, diffs, PR titles,
+The collector reads AO's local telemetry and sends **only derived numbers**. Code, diffs, PR titles,
 repo names, branch names, file paths and prompts are never read into the payload at all.
 
 The ingest schema is a whitelist: every field is a number, a date, or a value from a closed enum,
@@ -90,7 +90,7 @@ computes is a claim, not a fact.
 
 ```
 packages/shared      payload schema, scoring weights, enums — the contract
-packages/collector   npx CLI: reads ~/.ao/data/ao.db read-only, aggregates locally
+packages/collector   npx CLI: reads AO telemetry read-only, aggregates locally
 apps/web             leaderboard, ingest API, scoring engine, OG card renderer
 scripts/             seed-github.ts — merge-count verification
 ```

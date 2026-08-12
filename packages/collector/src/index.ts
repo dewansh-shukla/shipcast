@@ -19,7 +19,7 @@ Options
   --handle <name>               your GitHub handle
   --from <YYYY-MM-DD>           window start (default: 30 days ago)
   --to <YYYY-MM-DD>             window end (default: today)
-  --db <path>                   override the AO database location
+  --db <path>                   override the AO telemetry location
   --api <url>                   board API base URL
 
 Nothing leaves your machine unless you pass --publish. Code, diffs, PR titles,
