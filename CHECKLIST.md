@@ -111,7 +111,8 @@ so none of this exists until you make it exist.
 - [ ] At least one merge conflict resolved by an agent
 - [ ] At least one review round resolved by an agent
 - [ ] 4+ concurrent sessions captured on video
-- [ ] 3+ distinct harnesses used
+- [ ] 2+ distinct harnesses used (stretch — Claude Code is the only paid seat;
+      Copilot Free on one session is the cheapest second harness. One is fine.)
 - [ ] `--fixture` seeded database committed as a demo backstop
 
 Do not sabotage CI to manufacture failures — but do not pre-empt them either.

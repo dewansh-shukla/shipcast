@@ -6,16 +6,16 @@ together; do not wait for one ticket to merge before starting its neighbours.
 | #   | Ticket                | Harness     | Wave | Starts when                     |
 | --- | --------------------- | ----------- | ---- | ------------------------------- |
 | 01  | Schema probe          | claude-code | 1    | now                             |
-| 02  | Database and ingest   | codex       | 1    | now                             |
-| 03  | Wrapped card          | cursor      | 1    | now                             |
-| 04  | GitHub seeder         | opencode    | 1    | now                             |
-| 05  | Scoring engine        | codex       | 2    | 02 is **in flight**, not merged |
-| 06  | Leaderboard           | amp         | 2    | 03 is **in flight**, not merged |
+| 02  | Database and ingest   | claude-code | 1    | now                             |
+| 03  | Wrapped card          | claude-code | 1    | now                             |
+| 04  | GitHub seeder         | copilot*    | 1    | now                             |
+| 05  | Scoring engine        | claude-code | 2    | 02 is **in flight**, not merged |
+| 06  | Leaderboard           | claude-code | 2    | 03 is **in flight**, not merged |
 | 07  | Replay engine         | claude-code | 3    | 01 **merged**                   |
 | 08  | Metrics               | claude-code | 3    | 07 merged                       |
-| 09  | Terminal card         | aider       | 4    | 08 merged                       |
-| 10  | Publish / claim flow  | codex       | 4    | 08 merged                       |
-| 11  | Seed 30+ public repos | opencode    | 4    | 04 merged                       |
+| 09  | Terminal card         | claude-code | 4    | 08 merged                       |
+| 10  | Publish / claim flow  | claude-code | 4    | 08 merged                       |
+| 11  | Seed 30+ public repos | claude-code | 4    | 04 merged                       |
 
 ## Why the waves are shaped this way
 
@@ -37,7 +37,19 @@ Wave 4 is everything that turns working code into a demo.
 
 ## Harness assignment
 
-Not cosmetic. AO records token usage only for `claude-code` and `codex`, and the
-product reports cost per merged PR — so at least one of each must be running or
-that metric has no data. Harness diversity is also a scored input on our own
-leaderboard, which means the demo card demonstrates the metric it reports.
+We have a Claude Code subscription and nothing else, so effectively everything
+runs on `claude-code`. That is a smaller loss than it looks:
+
+- **Token and cost metrics still work.** AO meters `claude-code` and `codex`, and
+  we have one of the two. Cost per merged PR is intact.
+- **Parallelism still works.** Four concurrent sessions is what the demo is
+  about, and the harness they share does not change that number.
+- **Harness diversity is still implemented**, it is simply not exercised by our
+  own run. Our card will honestly report one harness, which is what a real solo
+  user looks like. Do not fabricate a second one to make the card denser.
+
+`*` Ticket 04 is marked `copilot` as an optional experiment — the account already
+has Copilot Free, and one extra harness would make our own diversity number 2
+instead of 1. Ticket 04 is the lightest of the four, so it is the cheapest place
+to try. If Copilot Free's limits bite, switch it to `claude-code` and move on.
+Do not spend more than ten minutes on this.
