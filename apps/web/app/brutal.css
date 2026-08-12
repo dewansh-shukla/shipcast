@@ -1,0 +1,109 @@
+/*
+ * The shared neo-brutalist system.
+ *
+ * Extracted from the landing page so every surface derives from one set of
+ * tokens rather than three interpretations of the same brief. Import this
+ * first, then a page-specific stylesheet for layout.
+ *
+ * Not the default neo-brutalism: black on safety yellow with a hard shadow is
+ * its own template now and appears regardless of subject. The palette is the
+ * product's own — the same phosphor, signal and ember the Wrapped card has
+ * always used — so the whole site reads as one family.
+ *
+ * Rules: 3px ink borders. Solid ink shadows, offset 6-8px, never blurred. No
+ * border-radius anywhere. Flat saturated blocks, never gradients. Two faces
+ * only: a heavy grotesque for display, ui-monospace for every number, code and
+ * command. Numbers are tabular so columns line up.
+ *
+ * Scope everything under `.brutal`. This file is imported by pages, not by the
+ * root layout, and Next keeps global CSS global once a client navigation
+ * happens — an unscoped `body` rule would leak across every route.
+ */
+
+body:has(> .brutal) {
+  margin: 0;
+  background: #f4f2ed;
+}
+
+.brutal {
+  /* Ground and ink */
+  --paper: #f4f2ed;
+  --ink: #0e1116;
+  --ash: #7e8794;
+
+  /* Accents, shared with the Wrapped card since its first version */
+  --phosphor: #ffb454; /* primary blocks, the number that matters */
+  --signal: #5fd4c4; /* verified, measured, good */
+  --ember: #e0685a; /* interventions, warnings, the LinkedIn side */
+
+  --display: "Arial Black", "Helvetica Neue", Impact, sans-serif;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Mono", Menlo, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+
+  --edge: 3px solid var(--ink);
+  --edge-thin: 2px solid var(--ink);
+  --drop: 8px 8px 0 var(--ink);
+  --drop-sm: 6px 6px 0 var(--ink);
+
+  min-height: 100vh;
+  padding: clamp(1rem, 4vw, 3rem) clamp(0.75rem, 4vw, 3rem) clamp(2rem, 6vw, 4rem);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: clamp(1rem, 0.96rem + 0.2vw, 1.0625rem);
+  line-height: 1.5;
+}
+
+.brutal *,
+.brutal *::before,
+.brutal *::after {
+  box-sizing: border-box;
+}
+
+.brutal h1,
+.brutal h2,
+.brutal h3 {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+  margin: 0;
+}
+
+.brutal code,
+.brutal .num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A slab: bordered block with a hard shadow. The system's one primitive. */
+.brutal .slab {
+  border: var(--edge);
+  box-shadow: var(--drop);
+  background: var(--paper);
+}
+
+/* An eyebrow: small uppercase mono label, usually on a coloured cap. */
+.brutal .eyebrow {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+/* Keyboard focus has to survive a design with no default outlines. */
+.brutal a:focus-visible,
+.brutal button:focus-visible {
+  outline: 3px solid var(--ember);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brutal *,
+  .brutal *::before,
+  .brutal *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
