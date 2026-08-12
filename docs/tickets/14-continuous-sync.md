@@ -32,14 +32,21 @@ correctly on wake.
 2. Open the stream with `Last-Event-ID: <lastSeq>`.
 3. Feed each event through the existing reducer. Reuse `replay.ts` — do not
    write a second implementation of transition derivation.
-4. Debounce 30 seconds, then recompute the **rolling window** (last 30 days) and
-   publish only if the totals differ from the last published payload.
+4. Debounce 30 seconds, then recompute the **current week** — `weekWindowFor(now)`
+   from `@ao-wrapped/shared` — and publish only if the totals differ from the
+   last published payload.
 5. Persist `lastSeq` after each successful publish.
 6. On disconnect, reconnect with backoff, carrying `Last-Event-ID`.
 
-Publish the whole rolling window every time, never a delta. Snapshots upsert by
-builder and window, so a full replacement is idempotent by construction and can
-never drift; deltas would make the server reconcile partial state.
+Publish the whole week every time, never a delta. Snapshots upsert by builder
+and week key, so a full replacement is idempotent by construction and can never
+drift; deltas would make the server reconcile partial state.
+
+**Handle the Monday rollover.** A `watch` process running across midnight UTC on
+Sunday must notice the week key changed, publish a final payload for the closing
+week, and start a fresh one. Do not let a long-running process keep writing to
+last week's row — that is the defect most likely to survive to production,
+because it only reproduces once every seven days.
 
 Last night produced 53 `session_updated` events. That must result in roughly one
 publish, not 53 — the debounce and the changed-check are both load-bearing.
@@ -49,7 +56,7 @@ publish, not 53 — the debounce and the changed-check are both load-bearing.
 A background process shipping data about the user indefinitely has to be
 conspicuous in a local-first product:
 
-- `ao-wrapped status` — "syncing · last published 3m ago · window 2026-07-14..08-13"
+- `ao-wrapped status` — "syncing · last published 3m ago · season 2026-W33"
 - `ao-wrapped stop` — stops immediately, one word
 - Never auto-start. The user types `watch` deliberately, every time.
 - Log each publish to stdout as one line, so a running terminal shows exactly

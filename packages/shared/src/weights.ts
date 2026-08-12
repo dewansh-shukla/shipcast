@@ -5,7 +5,9 @@ import type { Outcome, SizeBucket } from "./outcomes.ts";
  *
  *   session_pts = max(0, base(outcome) - INTERVENTION_PENALTY * interventions)
  *                 * sizeFactor(bucket)
- *   score       = sum(session_pts) * parallelismFactor * diversityFactor * decay
+ *   score       = sum(session_pts) * parallelismFactor * diversityFactor
+ *
+ * Scores are per weekly season and reset every Monday (see `week.ts`).
  *
  * Every weight is priced by how much autonomy the outcome proves, not by how
  * much work it looks like. These numbers are the product's argument — change
@@ -39,7 +41,11 @@ export const PARALLELISM_CAP = 1.5;
 export const DIVERSITY_STEP = 0.05;
 export const DIVERSITY_CAP = 1.25;
 
-/** Half-life in days. Set to null to disable decay (hackathon window). */
+/**
+ * Retired. The board runs in weekly seasons and resets every Monday, which does
+ * the job decay was invented for — keeping the top contested — without asking
+ * anyone to understand a half-life. See `week.ts`.
+ */
 export const DECAY_HALF_LIFE_DAYS: number | null = null;
 
 /** Anti-gaming limits. Enforced server-side before scoring. */
@@ -64,6 +70,7 @@ export function diversityFactor(distinctHarnesses: number): number {
   return Math.min(raw, DIVERSITY_CAP);
 }
 
+/** Always 1 while the board is weekly. Kept so the score formula reads whole. */
 export function decayFactor(ageDays: number): number {
   if (DECAY_HALF_LIFE_DAYS === null) return 1;
   return Math.pow(0.5, ageDays / DECAY_HALF_LIFE_DAYS);
