@@ -263,6 +263,49 @@ describe("totals", () => {
     expect(plain(OURS)).toContain("out of 10 tasks handed to agents (60% closed)");
   });
 
+  it("states a ratio, not an impossible percentage, when merges outrun tasks", () => {
+    // Merges are not a subset of tasks: one session can land several pull
+    // requests, and a PR can merge inside a window whose session opened before
+    // it. "136% closed" was a phrasing bug, so the fix is phrasing — the two
+    // counts stay exactly as measured.
+    const prolific = payload({
+      totals: { ...OURS.totals, tasks: 11, merges: 15 },
+      agents: [agent({ harness: "claude-code", tasks: 11, merges: 15, medianMinutes: 20 })],
+    });
+    const card = plain(prolific);
+    expect(card).toContain("15 merges");
+    expect(card).toContain("out of 11 tasks — 1.4 landed per session");
+    expect(card).not.toMatch(/1[0-9][0-9]% closed/);
+  });
+
+  it("keeps the percentage at the boundary, where it is still true", () => {
+    const even = payload({
+      totals: { ...OURS.totals, tasks: 8, merges: 8 },
+      agents: [agent({ harness: "claude-code", tasks: 8, merges: 8, medianMinutes: 20 })],
+    });
+    expect(plain(even)).toContain("out of 8 tasks handed to agents (100% closed)");
+  });
+
+  it("never prints a close rate above 100%, whatever the counts", () => {
+    for (const [tasks, merges] of [
+      [0, 0],
+      [1, 0],
+      [3, 3],
+      [3, 4],
+      [11, 15],
+      [1, 99],
+    ]) {
+      const card = plain(
+        payload({
+          totals: { ...OURS.totals, tasks: tasks!, merges: merges! },
+          agents: [],
+        }),
+      );
+      const rates = card.match(/(\d+)% closed/g) ?? [];
+      for (const rate of rates) expect(Number.parseInt(rate, 10)).toBeLessThanOrEqual(100);
+    }
+  });
+
   it("says so plainly when nothing ran, rather than dividing by zero", () => {
     const card = plain(EMPTY);
     expect(card).toContain("0 merges");
@@ -412,6 +455,21 @@ describe("awards", () => {
     });
   });
 
+  it("phrases Most Reliable as a ratio when a harness outruns its own tasks", () => {
+    // Same defect as the totals line, same file: a per-harness rate can pass 1
+    // for the same legitimate reasons, and "136% of 11 merged" is not a thing.
+    const prolific = payload({
+      totals: { ...BUSY.totals, tasks: 15, merges: 19, harnesses: 2 },
+      agents: [
+        agent({ harness: "claude-code", tasks: 11, merges: 15, medianMinutes: 20 }),
+        agent({ harness: "codex", tasks: 4, merges: 4, medianMinutes: 30 }),
+      ],
+    });
+    const section = renderPersonalities(prolific, { color: false });
+    expect(section).toContain("1.4 merges per task");
+    expect(section).not.toMatch(/1[0-9][0-9]%/);
+  });
+
   it("shows the arithmetic behind an award", () => {
     const section = renderPersonalities(BUSY, { color: false });
     expect(section).toContain("31 of 61 merges");
@@ -520,5 +578,21 @@ describe("snapshots", () => {
 
   it("renders a populated multi-harness card", () => {
     expect(plain(BUSY)).toMatchSnapshot();
+  });
+
+  it("renders a card whose agents landed more than one merge per session", () => {
+    const prolific = payload({
+      totals: { ...OURS.totals, tasks: 11, merges: 15 },
+      agents: [
+        agent({
+          harness: "claude-code",
+          tasks: 11,
+          merges: 15,
+          interventions: 4,
+          medianMinutes: 26,
+        }),
+      ],
+    });
+    expect(plain(prolific)).toMatchSnapshot();
   });
 });
