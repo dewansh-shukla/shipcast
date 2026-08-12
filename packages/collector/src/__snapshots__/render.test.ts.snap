@@ -1,5 +1,59 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`snapshots > renders a card whose agents landed more than one merge per session 1`] = `
+"┌──────────────────────────────────────────────────────────┐
+│                                                          │
+│  AO WRAPPED                             Jul 13 — Aug 12  │
+│  dewansh-shukla                                          │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  15 merges                                               │
+│  out of 11 tasks — 1.4 landed per session                │
+│                                                          │
+│  CI recoveries            0  Interventions           12  │
+│  Peak parallel            5  Harnesses                1  │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  THE CREW                                                │
+│                                                          │
+│  harness           tasks merged ci saves  died   median  │
+│  claude-code          11     15        0     0      26m  │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  AWARDS                                                  │
+│                                                          │
+│  Most Productive  not enough data yet                    │
+│  Most Reliable    not enough data yet                    │
+│  Most Chaotic     not enough data yet                    │
+│  Firefighter      not enough data yet                    │
+│  Workhorse        not enough data yet                    │
+│  Speed Demon      not enough data yet                    │
+│  Drama Queen      not enough data yet                    │
+│                                                          │
+│  An award is a comparison and claude-code is the only    │
+│  harness here. Run a second one and these fill in.       │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  GRAVEYARD                                               │
+│                                                          │
+│  Empty. Every session that started ended in a merge.     │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  Measured here, from a read-only pass over AO's own      │
+│  database. No code, diffs, repo names or prompts were    │
+│  read at all.                                            │
+│                                                          │
+│  Run  ao-wrapped --publish  to put these counters on     │
+│  the board.                                              │
+│                                                          │
+└──────────────────────────────────────────────────────────┘"
+`;
+
 exports[`snapshots > renders a populated multi-harness card 1`] = `
 "┌──────────────────────────────────────────────────────────┐
 │                                                          │

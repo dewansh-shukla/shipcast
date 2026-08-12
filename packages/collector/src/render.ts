@@ -261,9 +261,7 @@ function totals(card: Card, payload: IngestPayload): void {
   card.prose(
     !observed("merges")
       ? `Not measured here — ${UNOBSERVED_REASON.merges}.`
-      : t.tasks === 0
-        ? "No tasks ran in this window."
-        : `out of ${formatCount(t.tasks)} tasks handed to agents (${percent(t.merges, t.tasks)} closed)`,
+      : closeRate(t.merges, t.tasks),
   );
   card.line();
 
@@ -407,7 +405,10 @@ const CATEGORIES: Category[] = [
     eligible: (a) => a.tasks >= MIN_TASKS_FOR_RATE,
     score: (a) => a.merges / a.tasks,
     meaningful: (a) => a.merges > 0,
-    detail: (a) => `${percent(a.merges, a.tasks)} of ${formatCount(a.tasks)} merged`,
+    detail: (a) =>
+      a.merges > a.tasks
+        ? `${ratio(a.merges, a.tasks)} merges per task`
+        : `${percent(a.merges, a.tasks)} of ${formatCount(a.tasks)} merged`,
   },
   {
     title: "Most Chaotic",
@@ -588,6 +589,28 @@ function formatCount(value: number): string {
 function percent(part: number, whole: number): string {
   if (whole <= 0) return "0%";
   return `${Math.round((part / whole) * 100)}%`;
+}
+
+/**
+ * Merges measured against tasks, phrased so it stays true whichever way they
+ * fall.
+ *
+ * Merges are not a subset of tasks and the card must not imply they are: one
+ * session can land several pull requests, a PR can merge inside a window whose
+ * session opened before it, and a human can merge what an agent wrote. So more
+ * merges than tasks is a real outcome, not a miscount — "136% closed" was only
+ * ever a phrasing that assumed one merge per session.
+ *
+ * Clamping to 100% would hide that agents sometimes deliver more than one
+ * landed change per session, which is the more interesting fact of the two. The
+ * percentage stays for the ordinary case, where it reads well.
+ */
+function closeRate(merges: number, tasks: number): string {
+  if (tasks <= 0) return "No tasks ran in this window.";
+  // Kept inside the card's 54-column text width, so neither phrasing wraps.
+  if (merges > tasks)
+    return `out of ${formatCount(tasks)} tasks — ${ratio(merges, tasks)} landed per session`;
+  return `out of ${formatCount(tasks)} tasks handed to agents (${percent(merges, tasks)} closed)`;
 }
 
 function ratio(part: number, whole: number): string {
