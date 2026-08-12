@@ -72,6 +72,6 @@ export async function POST(request: Request): Promise<Response> {
   const handle = (fields.handle ?? "").trim();
   if (!isValidHandle(handle)) return back("badhandle");
 
-  const result = store.approve(userCode, { handle, githubId: null, avatarUrl: null });
+  const result = await store.approve(userCode, { handle, githubId: null, avatarUrl: null });
   return back(result.ok ? "approved" : result.status);
 }

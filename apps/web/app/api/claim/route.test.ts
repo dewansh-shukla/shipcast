@@ -185,34 +185,34 @@ describe("codes are single-use", () => {
     const { userCode } = await start();
     const store = getClaimStore();
 
-    expect(store.approve(userCode, { handle: "octocat", githubId: null, avatarUrl: null })).toEqual(
-      {
-        ok: true,
-        status: "approved",
-        handle: "octocat",
-      },
-    );
+    expect(
+      await store.approve(userCode, { handle: "octocat", githubId: null, avatarUrl: null }),
+    ).toEqual({
+      ok: true,
+      status: "approved",
+      handle: "octocat",
+    });
 
     /** A second approval must not mint a second token for the same code. */
     expect(
-      store.approve(userCode, { handle: "someone-else", githubId: null, avatarUrl: null }),
+      await store.approve(userCode, { handle: "someone-else", githubId: null, avatarUrl: null }),
     ).toEqual({ ok: false, status: "approved" });
   });
 
   it("refuses to approve a code that was already spent", async () => {
     const { userCode, deviceCode } = await start();
     const store = getClaimStore();
-    store.approve(userCode, { handle: "octocat", githubId: null, avatarUrl: null });
+    await store.approve(userCode, { handle: "octocat", githubId: null, avatarUrl: null });
 
     tick();
     store.poll(deviceCode);
 
-    expect(store.approve(userCode, { handle: "octocat", githubId: null, avatarUrl: null })).toEqual(
-      {
-        ok: false,
-        status: "used",
-      },
-    );
+    expect(
+      await store.approve(userCode, { handle: "octocat", githubId: null, avatarUrl: null }),
+    ).toEqual({
+      ok: false,
+      status: "used",
+    });
   });
 });
 

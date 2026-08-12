@@ -146,7 +146,7 @@ describe("a cold run reaches the board", () => {
       const started = await (
         await claimRoute(claim({ action: "start", handle: "octocat" }))
       ).json();
-      getClaimStore().approve(started.userCode, {
+      await getClaimStore().approve(started.userCode, {
         handle: "octocat",
         githubId: "583231",
         avatarUrl: null,
@@ -169,7 +169,7 @@ describe("a cold run reaches the board", () => {
 describe("a token cannot report for another handle", () => {
   it("is refused with 403 and stores nothing", async () => {
     const started = await (await claimRoute(claim({ action: "start", handle: "octocat" }))).json();
-    getClaimStore().approve(started.userCode, {
+    await getClaimStore().approve(started.userCode, {
       handle: "octocat",
       githubId: null,
       avatarUrl: null,

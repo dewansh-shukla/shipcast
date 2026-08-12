@@ -1,13 +1,16 @@
 import { weekKeyFor, type IngestPayload } from "@ao-wrapped/shared";
+import { isDatabaseConfigured } from "./client.ts";
+import { PostgresIngestStore } from "./postgres-store.ts";
 import type { AgentStatsRow, BuilderRow, SnapshotRow } from "./schema.ts";
 
 /**
  * TICKET B1 — persistence boundary.
  *
- * There is no provisioned database yet and no `DATABASE_URL`, so ingest talks
- * to this interface rather than to drizzle directly. The in-memory
- * implementation below is what the tests run against; a Postgres
- * implementation is a follow-up that swaps in behind the same three methods.
+ * Ingest talks to this interface rather than to drizzle directly. The in-memory
+ * implementation below is what the test suite runs against, so a contributor
+ * without a database can still run everything; `PostgresIngestStore` (ticket
+ * 16) implements the same interface and `getIngestStore()` picks between them
+ * on `DATABASE_URL`.
  *
  * The row types come from `./schema.ts` on purpose: if the payload ever grows a
  * field the tables cannot hold, this file stops compiling.
@@ -164,6 +167,24 @@ export class InMemoryIngestStore implements IngestStore {
     return row;
   }
 
+  /**
+   * Find or create the builder for a handle, case-insensitively.
+   *
+   * The claim flow calls this so a second claim by the same person reuses the
+   * first row — two ids for one person means only one of their weeks is ever
+   * ranked. Async and named to match `PostgresIngestStore`, so the claim flow
+   * can talk to either without knowing which it has.
+   */
+  async upsertBuilder(init: {
+    handle: string;
+    githubId?: string | null;
+    avatarUrl?: string | null;
+  }): Promise<BuilderRow> {
+    const wanted = init.handle.toLowerCase();
+    const existing = [...this.builders.values()].find((row) => row.handle.toLowerCase() === wanted);
+    return existing ?? this.addBuilder(init);
+  }
+
   /** Test and seed helper standing in for the device-claim flow. */
   issueToken(builderId: string, token: string): void {
     this.tokens.set(token, builderId);
@@ -285,11 +306,22 @@ export class InMemoryIngestStore implements IngestStore {
 let active: IngestStore | null = null;
 
 /**
- * The store the route uses. In-memory until `DATABASE_URL` exists and a
- * drizzle-backed implementation is wired in front of it.
+ * The store the route uses: Postgres when `DATABASE_URL` is set, memory when it
+ * is not.
+ *
+ * There is deliberately no third case. If `DATABASE_URL` is set and the
+ * database will not answer, `PostgresIngestStore` throws rather than degrading
+ * to memory — a silent fallback means the board looks healthy in development
+ * and drops every write in production, which nobody notices until the data is
+ * already gone.
+ *
+ * `postgres-store.ts` imports this module back for the interface and its
+ * errors. The cycle is safe because neither side touches the other at import
+ * time; this reference runs on the first request, long after both modules have
+ * initialised.
  */
 export function getIngestStore(): IngestStore {
-  active ??= new InMemoryIngestStore();
+  active ??= isDatabaseConfigured() ? new PostgresIngestStore() : new InMemoryIngestStore();
   return active;
 }
 
