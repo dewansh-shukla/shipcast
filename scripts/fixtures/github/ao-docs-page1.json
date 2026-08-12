@@ -1,0 +1,29 @@
+{
+  "data": {
+    "repository": {
+      "nameWithOwner": "Untrivial-ai/ao-docs",
+      "pullRequests": {
+        "pageInfo": { "hasNextPage": false, "endCursor": null },
+        "nodes": [
+          {
+            "number": 7,
+            "mergedAt": "2026-08-09T17:45:00Z",
+            "updatedAt": "2026-08-09T17:46:00Z",
+            "additions": 30,
+            "deletions": 2,
+            "author": { "__typename": "User", "login": "octocat" }
+          },
+          {
+            "number": 6,
+            "mergedAt": "2026-08-08T11:00:00Z",
+            "updatedAt": "2026-08-08T11:00:00Z",
+            "additions": 9,
+            "deletions": 0,
+            "author": null
+          }
+        ]
+      }
+    },
+    "rateLimit": { "limit": 5000, "cost": 1, "remaining": 4996, "resetAt": "2026-08-12T11:00:00Z" }
+  }
+}

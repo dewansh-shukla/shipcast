@@ -1,0 +1,29 @@
+{
+  "data": {
+    "repository": {
+      "nameWithOwner": "Untrivial-ai/agent-orchestrator",
+      "pullRequests": {
+        "pageInfo": { "hasNextPage": true, "endCursor": "Y3Vyc29yOjI=" },
+        "nodes": [
+          {
+            "number": 101,
+            "mergedAt": "2026-08-12T10:00:00Z",
+            "updatedAt": "2026-08-12T10:05:00Z",
+            "additions": 120,
+            "deletions": 30,
+            "author": { "__typename": "User", "login": "octocat" }
+          },
+          {
+            "number": 100,
+            "mergedAt": "2026-08-11T09:00:00Z",
+            "updatedAt": "2026-08-11T09:10:00Z",
+            "additions": 4,
+            "deletions": 1,
+            "author": { "__typename": "User", "login": "octocat" }
+          }
+        ]
+      }
+    },
+    "rateLimit": { "limit": 5000, "cost": 1, "remaining": 4998, "resetAt": "2026-08-12T11:00:00Z" }
+  }
+}
