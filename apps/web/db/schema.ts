@@ -223,6 +223,73 @@ export const deviceTokens = pgTable(
   ],
 );
 
+/**
+ * TICKET 20 — device-claim codes, which used to live in a Map.
+ *
+ * The claim flow spans three requests that need not land on the same machine:
+ * the CLI issues a code, the browser opens the approval page, and GitHub
+ * redirects back to the callback. On Vercel each of those can be a different
+ * serverless instance, so in-memory state meant the page answered "No such
+ * code" for a code issued seconds earlier — the first thing a stranger sees,
+ * and the reason nobody could join the board.
+ *
+ * The OAuth state is stored for the same reason. Fixing only the user code
+ * moves the failure one step later, to the GitHub callback.
+ *
+ * Two secrets pass through this table and neither is stored in the clear:
+ *
+ * - The device code is stored as a SHA-256 hash, like `device_tokens`. It is
+ *   the CLI's polling secret, so a leaked row must not let the reader collect
+ *   somebody else's token.
+ * - The bearer token is not stored here at all. It is minted when the CLI
+ *   collects it, not when the browser approves, so there is never a window
+ *   where a live credential is sitting in a claim row.
+ */
+export const claimStatusEnum = pgEnum("claim_status", [
+  "pending",
+  "approved",
+  "denied",
+  "consumed",
+]);
+
+export const claimCodes = pgTable(
+  "claim_codes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+
+    /** The short code a human types or clicks. Canonical `ABCD-EFGH` form. */
+    userCode: text("user_code").notNull(),
+    /** Hex SHA-256 of the CLI's polling secret. Never the secret itself. */
+    deviceCodeHash: text("device_code_hash").notNull(),
+    /** CSRF state for the GitHub round trip; the callback looks up by it. */
+    oauthState: text("oauth_state"),
+
+    /** What the CLI believes it is publishing for. Advisory, never trusted. */
+    handleHint: text("handle_hint"),
+
+    status: claimStatusEnum("status").notNull().default("pending"),
+
+    /** Set at approval, from GitHub's answer. Null until then. */
+    builderId: uuid("builder_id").references(() => builders.id, { onDelete: "cascade" }),
+    /** The approved handle, denormalised so the page needs no join. */
+    handle: text("handle"),
+
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }).notNull(),
+    approvedAt: timestamp("approved_at", { withTimezone: true, mode: "date" }),
+    /** Feeds the poll rate limit, which has to survive across instances too. */
+    lastPolledAt: timestamp("last_polled_at", { withTimezone: true, mode: "date" }),
+  },
+  (table) => [
+    unique("claim_codes_user_code_key").on(table.userCode),
+    unique("claim_codes_device_hash_key").on(table.deviceCodeHash),
+    /** The callback's only lookup key. */
+    index("claim_codes_oauth_state_idx").on(table.oauthState),
+    /** Expired rows are deleted opportunistically; this keeps that cheap. */
+    index("claim_codes_expires_idx").on(table.expiresAt),
+  ],
+);
+
 export const buildersRelations = relations(builders, ({ many }) => ({
   snapshots: many(snapshots),
   deviceTokens: many(deviceTokens),
@@ -251,3 +318,5 @@ export type SeedRow = typeof seeds.$inferSelect;
 export type NewSeedRow = typeof seeds.$inferInsert;
 export type DeviceTokenRow = typeof deviceTokens.$inferSelect;
 export type NewDeviceTokenRow = typeof deviceTokens.$inferInsert;
+export type ClaimCodeRow = typeof claimCodes.$inferSelect;
+export type NewClaimCodeRow = typeof claimCodes.$inferInsert;

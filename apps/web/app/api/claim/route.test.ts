@@ -234,7 +234,7 @@ describe("local approval", () => {
     const response = await approve(approval({ code: userCode, handle: "not a handle" }));
 
     expect(response.headers.get("location")).toBe(`${ORIGIN}/claim/${userCode}?status=badhandle`);
-    expect(getClaimStore().lookup(userCode)?.status).toBe("pending");
+    expect((await getClaimStore().lookup(userCode))?.status).toBe("pending");
   });
 });
 

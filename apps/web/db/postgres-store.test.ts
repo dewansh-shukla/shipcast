@@ -32,7 +32,12 @@ import {
  * hand-written backfill had never been run against a real Postgres before.
  */
 
-const MIGRATIONS = ["0000_init.sql", "0001_weekly_seasons.sql", "0002_device_tokens.sql"];
+const MIGRATIONS = [
+  "0000_init.sql",
+  "0001_weekly_seasons.sql",
+  "0002_device_tokens.sql",
+  "0003_claim_codes.sql",
+];
 
 async function applyMigrations(pg: PGlite): Promise<void> {
   for (const file of MIGRATIONS) {
@@ -323,7 +328,7 @@ describe("claim, publish, restart", () => {
   /** Walk the device-claim flow and come back with a bearer token. */
   async function claimToken(handle: string): Promise<string> {
     const claims = getClaimStore();
-    const started = claims.start(handle);
+    const started = await claims.start(handle);
 
     const approved = await claims.approve(started.userCode, {
       handle,
@@ -332,7 +337,7 @@ describe("claim, publish, restart", () => {
     });
     expect(approved.ok).toBe(true);
 
-    const polled = claims.poll(started.deviceCode);
+    const polled = await claims.poll(started.deviceCode);
     expect(polled.status).toBe("approved");
     expect(polled.token).toBeTypeOf("string");
     return polled.token!;

@@ -118,7 +118,7 @@ export default async function ClaimCodePage({
   const query = await searchParams;
 
   const userCode = normalizeUserCode(decodeURIComponent(code));
-  const claim = getClaimStore().lookup(userCode);
+  const claim = await getClaimStore().lookup(userCode);
 
   const requested = typeof query.status === "string" ? query.status : null;
   /**

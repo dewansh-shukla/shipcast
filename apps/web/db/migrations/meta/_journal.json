@@ -22,6 +22,13 @@
       "when": 1786568934490,
       "tag": "0002_device_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786573627192,
+      "tag": "0003_claim_codes",
+      "breakpoints": true
     }
   ]
 }
