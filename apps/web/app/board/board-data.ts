@@ -5,6 +5,13 @@ import {
   type WeekWindow,
 } from "@ao-wrapped/shared";
 import { getIngestStore, type PublishedSnapshot } from "../../db/store.ts";
+import {
+  transportFromEnv,
+  UNCHECKED,
+  verifyRows,
+  type Verification,
+  type VerifyOptions,
+} from "../../lib/verify.ts";
 
 /**
  * TICKET 06 — the data the leaderboard reads.
@@ -21,6 +28,11 @@ import { getIngestStore, type PublishedSnapshot } from "../../db/store.ts";
  * No score is computed here. Ticket 05 owns scoring and may not land; ranking on
  * merges with an explainable tiebreak ships either way, and the column set says
  * more than one opaque number would.
+ *
+ * TICKET 28 — verification is deliberately not part of `getBoard`. That read is
+ * a pure function of the store and stays that way; `withVerification` is a
+ * separate pass that may touch the network, so a board can always be built and
+ * tested without one.
  */
 
 /** One builder's season, as the board displays it. */
@@ -36,6 +48,12 @@ export interface BoardRow {
   harnesses: number;
   /** When this builder last published into this season. */
   publishedAt: Date;
+  /**
+   * Whether public GitHub corroborates `merges`. Every row starts `unchecked`
+   * — the store knows nothing about GitHub — and `withVerification` fills it in
+   * when a token is configured.
+   */
+  verification: Verification;
 }
 
 export interface Board {
@@ -76,6 +94,7 @@ export function rankSnapshots(published: readonly PublishedSnapshot[]): BoardRow
       interventions: entry.snapshot.interventions,
       harnesses: entry.snapshot.harnesses,
       publishedAt: entry.snapshot.receivedAt,
+      verification: UNCHECKED,
     }));
 }
 
@@ -96,6 +115,32 @@ export async function getBoard(weekKey?: string, now: Date = new Date()): Promis
     live: week.key === weekWindowFor(now).key,
     rows: rankSnapshots(published),
     asOf: now,
+  };
+}
+
+/**
+ * Attach verification to a season's rows.
+ *
+ * Separate from `getBoard` on purpose, and never in the ingest path: a publish
+ * must not wait on GitHub, and it does not — nothing here runs until somebody
+ * loads the board. Cache-first, bounded by a wall-clock budget, and every
+ * failure resolves to `unchecked`, so with no `GITHUB_TOKEN`, a rate limit or a
+ * GitHub outage this returns the same board it was handed.
+ *
+ * It never throws. A verification problem is not a reason to lose the board.
+ */
+export async function withVerification(board: Board, options: VerifyOptions = {}): Promise<Board> {
+  const transport = options.transport === undefined ? transportFromEnv() : options.transport;
+  if (transport === null || board.rows.length === 0) return board;
+
+  const verified = await verifyRows(board.rows, board.week, { ...options, transport });
+
+  return {
+    ...board,
+    rows: board.rows.map((row) => ({
+      ...row,
+      verification: verified.get(row.handle) ?? UNCHECKED,
+    })),
   };
 }
 

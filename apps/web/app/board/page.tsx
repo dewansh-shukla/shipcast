@@ -9,6 +9,7 @@ import {
   previousSeasonKey,
   seasonDates,
   seasonLabel,
+  withVerification,
   type Board,
   type BoardRow,
 } from "./board-data.ts";
@@ -31,6 +32,11 @@ import "./board.css";
  * shadow or face is declared in this file. The view lives here rather than
  * beside it because this is the one owned file that can hold JSX for both
  * routes.
+ *
+ * TICKET 28 — a verified handle gets a quiet signal-coloured tick. Unverified
+ * is the ordinary case for anyone working in private repositories, so it is not
+ * marked at all: only the corroborated rows say anything, and nothing on the
+ * page reads as suspicion.
  */
 
 /** Freshness is a column, so the page cannot be cached into staleness. */
@@ -46,7 +52,11 @@ export default async function BoardPage() {
   // `getBoard()` with no key derives the season from the clock, so it is never
   // null. The check keeps the type honest rather than asserting.
   if (board === null) return null;
-  return <BoardView board={board} />;
+  /**
+   * Cache-first and time-boxed, and it returns the board untouched when there is
+   * no `GITHUB_TOKEN`. Nothing here is in the publish path.
+   */
+  return <BoardView board={await withVerification(board)} />;
 }
 
 /**
@@ -164,6 +174,15 @@ function Standings({ board }: { board: Board }) {
           <dt>Nudges</dt>
           <dd>times a session stopped and waited for a human</dd>
         </div>
+        <div>
+          <dt>
+            <VerifiedMark /> Verified
+          </dt>
+          <dd>
+            public GitHub activity is consistent with what was reported — private work will not show
+            up here
+          </dd>
+        </div>
       </dl>
     </section>
   );
@@ -179,6 +198,7 @@ function Row({ row, asOf }: { row: BoardRow; asOf: Date }) {
       </td>
       <th scope="row" className="col-builder">
         <Link href={`/w/${encodeURIComponent(row.handle)}`}>{row.handle}</Link>
+        {row.verification.state === "verified" && <VerifiedMark />}
       </th>
       <td className="col-num col-merges">{formatCount(row.merges)}</td>
       <td className="col-num shed-2">{formatCount(row.tasks)}</td>
@@ -190,6 +210,31 @@ function Row({ row, asOf }: { row: BoardRow; asOf: Date }) {
         <time dateTime={isoStamp(row.publishedAt)}>{formatFreshness(row.publishedAt, asOf)}</time>
       </td>
     </tr>
+  );
+}
+
+/**
+ * The tick, and the whole of the verified treatment.
+ *
+ * `--signal` is a `brutal.css` token; the colour is referenced, never declared.
+ * It would be better placed in `board.css` beside the other column rules, but
+ * that file belongs to another ticket and a cross-ticket edit costs more than
+ * it saves.
+ *
+ * `role="img"` with a label rather than a bare glyph: a tick read aloud as
+ * "check mark" beside a username says nothing about what was checked.
+ */
+function VerifiedMark() {
+  return (
+    <span
+      className="verified-mark"
+      style={{ color: "var(--signal)" }}
+      role="img"
+      aria-label="verified against public GitHub"
+      title="Public GitHub activity is consistent with what was reported"
+    >
+      ✓
+    </span>
   );
 }
 
