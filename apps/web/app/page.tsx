@@ -160,6 +160,19 @@ function Hero() {
           </div>
         </figure>
 
+        <div className="meme-block hero-meme">
+          <Image
+            className="meme"
+            src="/memes/swap.webp"
+            alt=""
+            aria-hidden="true"
+            width={860}
+            height={968}
+            sizes="(max-width: 640px) 60vw, 15rem"
+          />
+          <p className="meme-caption">the flex was never the post</p>
+        </div>
+
         <figure className="block receipts">
           <figcaption className="block-head">what your disk says</figcaption>
           <div className="block-body receipts-body">
@@ -177,19 +190,6 @@ function Hero() {
             <p className="receipts-meta">read from ~/.ao · {RECEIPTS.window} · mine, really</p>
           </div>
         </figure>
-      </div>
-
-      <div className="meme-block hero-meme">
-        <Image
-          className="meme"
-          src="/memes/swap.webp"
-          alt=""
-          aria-hidden="true"
-          width={860}
-          height={968}
-          sizes="(max-width: 640px) 60vw, 15rem"
-        />
-        <p className="meme-caption">the flex was never the post</p>
       </div>
 
       <p className="punchline">

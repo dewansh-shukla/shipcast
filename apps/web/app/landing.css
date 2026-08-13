@@ -677,16 +677,38 @@ body:has(> .landing) {
  * narrow one it drops below and shrinks, because the two cards it is joking
  * about have to be readable first.
  */
+/*
+ * The swap sits between the two cards in the DOM, which is what a single column
+ * wants: post, punchline, receipts. On two columns that same order would push
+ * the receipts card onto a second row, so there it spans both columns and drops
+ * below instead — the joke still lands last either way.
+ */
 .landing .hero-meme {
   --meme-w: 15rem;
   --meme-tilt: -3deg;
-  margin-top: 1.5rem;
+  align-self: center;
+}
+
+@media (min-width: 52.0625rem) {
+  .landing .hero-meme {
+    grid-column: 1 / -1;
+    order: 3;
+    margin-top: 0.5rem;
+  }
 }
 
 .landing .score-meme {
   --meme-w: 15rem;
   --meme-tilt: 2deg;
   margin-top: 1.25rem;
+}
+
+.landing .versus {
+  justify-items: center;
+}
+
+.landing .versus > .block {
+  width: 100%;
 }
 
 @media (max-width: 640px) {

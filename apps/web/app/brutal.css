@@ -143,7 +143,9 @@ body:has(> .brutal) {
   /* Roomier than it looks like it needs: the tilt drops one corner of the
      image below its own box, and a tighter gap lets it clip the caption. */
   gap: 0.9rem;
-  align-items: flex-start;
+  align-items: center;
+  text-align: center;
+  margin-inline: auto;
 }
 
 .brutal .meme-block .meme-caption,

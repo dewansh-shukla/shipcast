@@ -393,8 +393,8 @@
 .board .board-meme {
   --meme-w: 13rem;
   --meme-tilt: 2deg;
-  margin-left: auto;
   align-self: center;
+  width: 100%;
 }
 
 .board .closed-meme {
@@ -406,6 +406,5 @@
 @media (max-width: 720px) {
   .board .board-meme {
     --meme-w: 9rem;
-    margin-left: 0;
   }
 }

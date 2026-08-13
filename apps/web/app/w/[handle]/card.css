@@ -487,12 +487,11 @@
 .card-meme {
   --meme-w: 11rem;
   --meme-tilt: 3deg;
-  margin: 0 0 0.5rem auto;
+  margin: 0 auto 0.5rem;
 }
 
 @media (max-width: 640px) {
   .card-meme {
     --meme-w: 8.5rem;
-    margin-right: 0;
   }
 }
