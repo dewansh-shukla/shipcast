@@ -671,3 +671,27 @@ body:has(> .landing) {
     transform: none;
   }
 }
+
+/*
+ * Hero sticker. On a wide screen it hangs to the right of the comparison; on a
+ * narrow one it drops below and shrinks, because the two cards it is joking
+ * about have to be readable first.
+ */
+.landing .hero-meme {
+  --meme-w: 15rem;
+  --meme-tilt: -3deg;
+  margin-top: 1.5rem;
+}
+
+.landing .score-meme {
+  --meme-w: 15rem;
+  --meme-tilt: 2deg;
+  margin-top: 1.25rem;
+}
+
+@media (max-width: 640px) {
+  .landing .hero-meme,
+  .landing .score-meme {
+    --meme-w: 11rem;
+  }
+}

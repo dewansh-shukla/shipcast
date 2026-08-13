@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import {
   CONNECT_COMMAND,
@@ -94,9 +95,41 @@ export function BoardView({ board }: { board: Board }) {
               {board.live ? null : <Link href="/board">this week →</Link>}
             </nav>
           </div>
+
+          <div className="meme-block board-meme">
+            <Image
+              className="meme"
+              src="/memes/jali-na.webp"
+              alt=""
+              aria-hidden="true"
+              width={300}
+              height={161}
+              sizes="(max-width: 720px) 45vw, 13rem"
+            />
+            <p className="meme-caption">
+              {board.rows.length === 0
+                ? "nobody to be jealous of yet"
+                : `rank 1 is ${board.rows[0]?.handle ?? "taken"}`}
+            </p>
+          </div>
         </header>
 
         {board.rows.length === 0 ? <EmptySeason board={board} /> : <Standings board={board} />}
+
+        {board.live ? null : (
+          <div className="meme-block closed-meme">
+            <Image
+              className="meme"
+              src="/memes/zamana.webp"
+              alt=""
+              aria-hidden="true"
+              width={300}
+              height={148}
+              sizes="(max-width: 720px) 55vw, 14rem"
+            />
+            <p className="meme-caption">a closed season. we were all rank 1 once.</p>
+          </div>
+        )}
 
         <footer className="board-footer">
           <p>

@@ -379,3 +379,33 @@
     padding: 0.6rem 0.5rem;
   }
 }
+
+/*
+ * The memes sit beside the season header on a wide screen and below it on a
+ * narrow one. `masthead` is the flex parent; letting the sticker wrap keeps the
+ * headline from being squeezed at 360px, where the season key is the thing that
+ * has to stay readable.
+ */
+.board .masthead {
+  flex-wrap: wrap;
+}
+
+.board .board-meme {
+  --meme-w: 13rem;
+  --meme-tilt: 2deg;
+  margin-left: auto;
+  align-self: center;
+}
+
+.board .closed-meme {
+  --meme-w: 14rem;
+  --meme-tilt: -2deg;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 720px) {
+  .board .board-meme {
+    --meme-w: 9rem;
+    margin-left: 0;
+  }
+}

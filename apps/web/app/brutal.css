@@ -107,3 +107,59 @@ body:has(> .brutal) {
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * Memes, as stickers.
+ *
+ * Photographs in a flat, hard-edged system read as pasted-on unless they are
+ * treated as physical objects, so they get the same ink border and hard shadow
+ * every other block gets, plus a slight tilt. Same move as the logo.
+ *
+ * They are decoration and carry no information the page does not already state
+ * in words, so each one is `aria-hidden` with an empty alt: a screen reader
+ * announcing "Akshay Kumar pointing" mid-sentence is noise, not access.
+ *
+ * `--meme-w` lets each placement size its own without new rules.
+ */
+.brutal .meme,
+.landing .meme {
+  display: block;
+  width: 100%;
+  max-width: var(--meme-w, 15rem);
+  height: auto;
+  border: var(--edge);
+  box-shadow: var(--drop-sm);
+  background: var(--paper);
+  transform: rotate(var(--meme-tilt, -2deg));
+  flex: none;
+}
+
+/* A meme with a caption strip under it, in the system's voice rather than the
+   film's. The caption is the joke landing on our subject. */
+.brutal .meme-block,
+.landing .meme-block {
+  display: flex;
+  flex-direction: column;
+  /* Roomier than it looks like it needs: the tilt drops one corner of the
+     image below its own box, and a tighter gap lets it clip the caption. */
+  gap: 0.9rem;
+  align-items: flex-start;
+}
+
+.brutal .meme-block .meme-caption,
+.landing .meme-block .meme-caption {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--ash);
+  max-width: var(--meme-w, 15rem);
+  transform: rotate(var(--meme-tilt, -2deg));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brutal .meme,
+  .brutal .meme-block .meme-caption,
+  .landing .meme-block .meme-caption {
+    transform: none;
+  }
+}

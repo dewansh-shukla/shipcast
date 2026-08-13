@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Image from "next/image";
 import type { Metadata } from "next";
 import type { AgentStats } from "@ao-wrapped/shared";
 import {
@@ -114,6 +115,21 @@ export default async function WrappedPage({ params }: { params: Promise<{ handle
               : "Not on the board yet · only collector-reported work is ranked"}
           </p>
         </header>
+
+        {connected ? (
+          <div className="meme-block card-meme">
+            <Image
+              className="meme"
+              src="/memes/flex.webp"
+              alt=""
+              aria-hidden="true"
+              width={500}
+              height={375}
+              sizes="(max-width: 640px) 45vw, 11rem"
+            />
+            <p className="meme-caption">receipts attached</p>
+          </div>
+        ) : null}
 
         {card.state === "connected" ? <Connected card={card} /> : <NotConnected card={card} />}
 

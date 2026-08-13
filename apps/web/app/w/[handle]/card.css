@@ -475,3 +475,24 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/*
+ * Only on a connected card — a builder who has not published yet has nothing to
+ * be smug about, and the sticker would read as mocking them.
+ *
+ * The share image at ./card.png is deliberately untouched. That is the artifact
+ * that unfurls on X and LinkedIn and it has to carry the numbers straight; a
+ * film still in it turns a claim about someone's work into a joke about it.
+ */
+.card-meme {
+  --meme-w: 11rem;
+  --meme-tilt: 3deg;
+  margin: 0 0 0.5rem auto;
+}
+
+@media (max-width: 640px) {
+  .card-meme {
+    --meme-w: 8.5rem;
+    margin-right: 0;
+  }
+}

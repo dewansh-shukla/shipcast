@@ -10,6 +10,7 @@ import {
   seasonLabel,
   type Board,
 } from "./board/board-data.ts";
+import "./brutal.css";
 import "./landing.css";
 
 /**
@@ -178,6 +179,19 @@ function Hero() {
         </figure>
       </div>
 
+      <div className="meme-block hero-meme">
+        <Image
+          className="meme"
+          src="/memes/swap.webp"
+          alt=""
+          aria-hidden="true"
+          width={860}
+          height={968}
+          sizes="(max-width: 640px) 60vw, 15rem"
+        />
+        <p className="meme-caption">the flex was never the post</p>
+      </div>
+
       <p className="punchline">
         Your agents needed you <em>14 times</em> this week. That&apos;s not a flex. That&apos;s the
         point.
@@ -304,6 +318,19 @@ function Scoring() {
         {RECEIPTS.died} session died in the week above. No points deducted — we&apos;re not
         monsters.
       </p>
+
+      <div className="meme-block score-meme">
+        <Image
+          className="meme"
+          src="/memes/miracle.webp"
+          alt=""
+          aria-hidden="true"
+          width={500}
+          height={261}
+          sizes="(max-width: 640px) 60vw, 15rem"
+        />
+        <p className="meme-caption">an agent turning its own red build green, +18</p>
+      </div>
     </section>
   );
 }
