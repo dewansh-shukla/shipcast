@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { INTERVENTION_PENALTY, OUTCOME_POINTS } from "@ao-wrapped/shared";
 import {
@@ -133,7 +134,10 @@ export default async function HomePage() {
 function Hero() {
   return (
     <header className="masthead">
-      <p className="eyebrow">AO Wrapped</p>
+      <div className="brand">
+        <Image className="brand-mark" src="/logo.png" alt="" width={500} height={500} priority />
+        <p className="eyebrow">AO Wrapped</p>
+      </div>
 
       <h1 className="headline">
         Everyone says AI <span className="strike">10x&apos;d</span> them.{" "}

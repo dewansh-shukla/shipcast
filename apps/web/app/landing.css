@@ -634,3 +634,40 @@ body:has(> .landing) {
     transform: none;
   }
 }
+
+/*
+ * The logo is glossy and three-dimensional; this page is flat, hard-edged and
+ * gradient-free. Blending the two would weaken both, so the mark is treated as
+ * a sticker — a physical object sitting on the paper, with the same ink border
+ * and hard shadow every other block gets, tilted just enough to read as applied
+ * rather than placed. Collage is part of this vocabulary; a soft-blended
+ * gradient badge is not.
+ *
+ * `alt=""` on the image is deliberate: the wordmark beside it already carries
+ * the name, so announcing it twice is noise for a screen reader.
+ */
+.landing .brand {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.landing .brand-mark {
+  /* Large enough to read as the logo rather than as a blue smudge. Below about
+     5rem the character and the wordmark inside it stop resolving, at which
+     point the mark is costing attention without returning anything. */
+  width: clamp(5rem, 11vw, 7.5rem);
+  height: auto;
+  background: var(--paper);
+  border: var(--edge);
+  box-shadow: var(--drop-sm);
+  padding: 0.25rem;
+  transform: rotate(-3deg);
+  flex: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing .brand-mark {
+    transform: none;
+  }
+}
