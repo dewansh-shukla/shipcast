@@ -1,6 +1,7 @@
 import { IngestPayloadSchema } from "@ao-wrapped/shared";
 import type { ZodIssue } from "zod";
 import { getIngestStore, weekKeyForWindow } from "../../../db/store.ts";
+import { checkIntegrity, minPublishIntervalMs, publishedTooSoon } from "./integrity.ts";
 
 /**
  * TICKET B1 — ingest.
@@ -16,6 +17,10 @@ import { getIngestStore, weekKeyForWindow } from "../../../db/store.ts";
  * Nor is the season accepted from the client. The board runs in weekly seasons
  * and the week a payload lands in is derived here from its window, so a
  * collector cannot file this week's numbers into a season that has closed.
+ *
+ * TICKET 27 — a payload also has to agree with itself. See `integrity.ts`,
+ * which is explicit that those checks are not security: they make forgery work
+ * and carelessness visible, and that is the whole claim.
  */
 
 /** Extract the bearer token, or null if the header is absent or malformed. */
@@ -121,6 +126,56 @@ export async function POST(request: Request): Promise<Response> {
         unknownFields: [],
       },
       { status: 400 },
+    );
+  }
+
+  /**
+   * Coherence and plausibility, after the schema and after the handle check —
+   * there is no point telling somebody their arithmetic disagrees with itself
+   * before establishing that the numbers are theirs to send.
+   */
+  const failure = checkIntegrity(parsed.data);
+  if (failure) {
+    /**
+     * The handle and the rule, never the payload. A rejected body is the one
+     * thing on this route we have not validated, and the schema is the privacy
+     * guarantee precisely because nothing unvalidated gets stored — or logged.
+     */
+    console.warn(
+      `ingest rejected: ${builder.handle} failed ${failure.invariant} (${failure.reason})`,
+    );
+
+    return Response.json(
+      {
+        error: "incoherent payload",
+        reason: failure.reason,
+        invariant: failure.invariant,
+        fields: failure.fields,
+      },
+      { status: 422 },
+    );
+  }
+
+  /**
+   * Rate limit, measured off the last stored snapshot rather than a counter in
+   * memory: this route runs on serverless instances that share nothing, so the
+   * only clock all of them agree on is the database. `watch` already publishes
+   * at most once every thirty seconds, so an honest client never sees this.
+   */
+  const previous = await store.latestSnapshotForHandle(builder.handle);
+  const retryAfter = publishedTooSoon(previous?.snapshot.receivedAt, new Date());
+  if (retryAfter !== null) {
+    console.warn(`ingest rejected: ${builder.handle} published again after ${retryAfter}s`);
+
+    return Response.json(
+      {
+        error: "too many requests",
+        reason:
+          `this handle published less than ${Math.round(minPublishIntervalMs() / 1000)} seconds ago; ` +
+          `wait ${retryAfter}s`,
+        fields: [],
+      },
+      { status: 429, headers: { "retry-after": String(retryAfter) } },
     );
   }
 

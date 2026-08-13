@@ -1,5 +1,5 @@
 import type { IngestPayload } from "@ao-wrapped/shared";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { InMemoryIngestStore, setIngestStore } from "../../../db/store.ts";
 import { POST } from "./route.ts";
 
@@ -23,7 +23,8 @@ function validPayload(): IngestPayload {
       turns: 187,
       repos: 3,
     },
-    outcomes: { clean: 5, ci_recovered: 3, died: 1, conflict_resolved: 1 },
+    /** Sums to totals.tasks: every session ends in exactly one outcome. */
+    outcomes: { clean: 5, ci_recovered: 3, died: 1, conflict_resolved: 1, opened_unmerged: 2 },
     sizeMix: { xs: 1, s: 3, m: 6, l: 2 },
     topRepoShare: 0.35,
     agents: [
@@ -69,6 +70,13 @@ let store: InMemoryIngestStore;
 let builderId: string;
 
 beforeEach(() => {
+  /**
+   * These publish twice on purpose — replacing a snapshot, crossing a rollover.
+   * Ingest rate-limits a handle to one publish every thirty seconds, and
+   * waiting that out is the only thing the wait would measure.
+   */
+  vi.stubEnv("AO_WRAPPED_MIN_PUBLISH_INTERVAL_MS", "0");
+
   store = new InMemoryIngestStore();
   builderId = store.addBuilder({ handle: "octocat", githubId: "583231" }).id;
   store.issueToken(builderId, TOKEN);
@@ -76,6 +84,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   setIngestStore(null);
 });
 
@@ -113,6 +122,11 @@ describe("POST /api/ingest", () => {
 
     const second = validPayload();
     second.totals.merges = 11;
+    /** The parts have to add up to the total ingest now checks against. */
+    second.agents = second.agents.map((agent, index) => ({
+      ...agent,
+      merges: index === 0 ? 8 : 3,
+    }));
     const response = await POST(post(second));
 
     expect(response.status).toBe(200);
@@ -171,6 +185,10 @@ describe("POST /api/ingest", () => {
     const next = validPayload();
     next.window = { from: "2026-08-17", to: "2026-08-23" };
     next.totals.merges = 1;
+    next.agents = next.agents.map((agent, index) => ({
+      ...agent,
+      merges: index === 0 ? 1 : 0,
+    }));
     const response = await POST(post(next));
 
     expect(response.status).toBe(201);
