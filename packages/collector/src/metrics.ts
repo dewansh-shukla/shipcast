@@ -61,7 +61,7 @@ export interface MetricsInput {
  * manifest, so the literal lives here and is asserted against the manifest by
  * the test rather than left to drift.
  */
-export const COLLECTOR_VERSION = "0.1.3";
+export const COLLECTOR_VERSION = "0.1.4";
 
 /** Schema ceilings, enforced here so a busy install cannot produce a 400. */
 const MAX_COUNT = 100_000;
