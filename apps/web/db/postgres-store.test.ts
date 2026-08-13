@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import type { IngestPayload } from "@ao-wrapped/shared";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST as ingest } from "../app/api/ingest/route.ts";
 import { getClaimStore, resetClaimStore } from "../app/api/claim/store.ts";
 import { getWrappedCard } from "../app/w/[handle]/card-data.ts";
@@ -67,7 +67,8 @@ function payload(overrides: Partial<IngestPayload> = {}): IngestPayload {
       turns: 187,
       repos: 3,
     },
-    outcomes: { clean: 5, ci_recovered: 3, died: 1 },
+    /** Sums to totals.tasks: every session ends in exactly one outcome. */
+    outcomes: { clean: 5, ci_recovered: 3, died: 1, opened_unmerged: 3 },
     sizeMix: { xs: 1, s: 3, m: 6, l: 2 },
     topRepoShare: 0.35,
     agents: [
@@ -134,7 +135,7 @@ describe("PostgresIngestStore", () => {
     expect(snapshot.merges).toBe(9);
     expect(snapshot.turns).toBe(187);
     expect(snapshot.topRepoShare).toBeCloseTo(0.35);
-    expect(snapshot.outcomes).toEqual({ clean: 5, ci_recovered: 3, died: 1 });
+    expect(snapshot.outcomes).toEqual({ clean: 5, ci_recovered: 3, died: 1, opened_unmerged: 3 });
     expect(snapshot.graveyard).toEqual([{ harness: "claude-code", cause: "merge_conflict" }]);
     expect(Object.keys(snapshot)).not.toContain("score");
 
@@ -315,12 +316,19 @@ describe("PostgresIngestStore", () => {
  */
 describe("claim, publish, restart", () => {
   beforeEach(async () => {
+    /**
+     * This block publishes twice on purpose, to prove a snapshot survives a
+     * restart. Ingest rate-limits a handle to one publish every thirty seconds
+     * and waiting that out is the only thing the wait would measure.
+     */
+    vi.stubEnv("AO_WRAPPED_MIN_PUBLISH_INTERVAL_MS", "0");
     await pg.exec(`truncate table "builders" cascade`);
     resetClaimStore();
     setIngestStore(new PostgresIngestStore(db));
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     resetClaimStore();
     setIngestStore(null);
   });
@@ -381,7 +389,17 @@ describe("claim, publish, restart", () => {
 
     /** And the token minted before the restart still authorises a publish. */
     const republished = await ingest(
-      publish(token, payload({ totals: { ...payload().totals, merges: 21 } })),
+      publish(
+        token,
+        payload({
+          totals: { ...payload().totals, merges: 21 },
+          /** Ingest now checks that the parts add up to the total. */
+          agents: payload().agents.map((agent, index) => ({
+            ...agent,
+            merges: index === 0 ? 14 : 7,
+          })),
+        }),
+      ),
     );
     expect(republished.status).toBe(200);
     await expect(republished.json()).resolves.toMatchObject({ replaced: true });

@@ -39,7 +39,8 @@ function payloadFor(handle: string): IngestPayload {
       turns: 0,
       repos: 1,
     },
-    outcomes: { clean: 2, died: 1 },
+    /** Sums to totals.tasks: every session ends in exactly one outcome. */
+    outcomes: { clean: 2, died: 1, opened_unmerged: 1 },
     sizeMix: { s: 1, m: 1 },
     topRepoShare: 1,
     agents: [
