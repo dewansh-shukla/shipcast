@@ -27,8 +27,9 @@
     "leaderboard"
   ],
   "files": [
-    "dist",
-    "README.md"
+    "LICENSE",
+    "README.md",
+    "dist"
   ],
   "engines": {
     "node": ">=22.5"
