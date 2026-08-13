@@ -6,6 +6,7 @@ import { computeMetrics } from "./metrics.ts";
 import { replay } from "./replay.ts";
 import { renderCard } from "./render.ts";
 import { credentialsPath, dryRun, publish, readCredentials } from "./publish.ts";
+import { runStatus, runStop, runWatch } from "./watch.ts";
 import { weekWindowFor } from "@ao-wrapped/shared";
 
 const USAGE = `
@@ -15,6 +16,11 @@ ao-wrapped — what your AI workforce actually accomplished
   ao-wrapped --dump-schema      print the AO schema this install exposes
   ao-wrapped --dry-run          print the exact JSON that publishing would send
   ao-wrapped --publish          send derived numbers to the board (opt-in)
+
+Continuous sync
+  ao-wrapped watch              keep the board current; runs until stopped
+  ao-wrapped status             what is syncing, and when it last published
+  ao-wrapped stop               end the running watcher
 
 Options
   --handle <name>               your GitHub handle
@@ -27,7 +33,18 @@ Nothing leaves your machine unless you pass --publish. Code, diffs, PR titles,
 repo names and branch names are never read into the payload at all.
 `;
 
-const { values } = parseArgs({
+/**
+ * Verbs, not flags. `watch` is a mode the process stays in rather than a
+ * modifier on printing a card, and a flag that never returns reads as a bug.
+ */
+const COMMANDS = ["watch", "status", "stop"] as const;
+type Command = (typeof COMMANDS)[number];
+
+function isCommand(value: string): value is Command {
+  return (COMMANDS as readonly string[]).includes(value);
+}
+
+const { values, positionals } = parseArgs({
   options: {
     "dump-schema": { type: "boolean", default: false },
     "dry-run": { type: "boolean", default: false },
@@ -39,7 +56,9 @@ const { values } = parseArgs({
     api: { type: "string" },
     help: { type: "boolean", short: "h", default: false },
   },
-  allowPositionals: false,
+  // Positionals carry the subcommands. Every flag keeps working exactly as it
+  // did: a bare `ao-wrapped` still prints the card.
+  allowPositionals: true,
 });
 
 /**
@@ -74,7 +93,31 @@ async function main(): Promise<number> {
     return 0;
   }
 
-  const apiBase = values.api ?? process.env.AO_WRAPPED_API ?? "https://ao-wrapped.vercel.app";
+  /**
+   * Split deliberately. `status` reports on a watcher that may be syncing to a
+   * board this invocation never named, so it is told the base only when the
+   * user actually chose one — otherwise it answers from the watcher's own
+   * record instead of asserting the default board.
+   */
+  const chosenApi = values.api ?? process.env.AO_WRAPPED_API;
+  const apiBase = chosenApi ?? "https://ao-wrapped.vercel.app";
+
+  const [verb, ...extra] = positionals;
+  if (verb !== undefined) {
+    if (!isCommand(verb)) {
+      process.stderr.write(`ao-wrapped: unknown command "${verb}"\n${USAGE}`);
+      return 1;
+    }
+    if (extra.length > 0) {
+      process.stderr.write(`ao-wrapped: ${verb} takes no arguments (got "${extra[0]}")\n`);
+      return 1;
+    }
+    // Dispatched before the telemetry is opened: `status` and `stop` answer
+    // from the watcher's own state file, and refusing to say whether a watcher
+    // is running because AO is not installed here would be nonsense.
+    return runCommand(verb, { apiBase, chosenApi });
+  }
+
   const fallbackWindow = defaultWindow();
 
   const { db } = openAoDatabase(values.db ?? resolveDbPath());
@@ -108,6 +151,28 @@ async function main(): Promise<number> {
   }
 
   return 0;
+}
+
+/**
+ * `watch.ts` owns all three behaviours — SSE resumption, the debounce, the
+ * Monday rollover, the PID lock. This is wiring and nothing else.
+ *
+ * `runWatch` installs its own SIGINT and SIGTERM handlers and releases the lock
+ * in a `finally`, so Ctrl-C leaves no stale watcher for the next `watch` to trip
+ * over. Nothing here may exit the process ahead of it.
+ */
+async function runCommand(
+  command: Command,
+  api: { apiBase: string; chosenApi: string | undefined },
+): Promise<number> {
+  switch (command) {
+    case "watch":
+      return runWatch({ api: api.apiBase, handle: values.handle, dbPath: values.db });
+    case "status":
+      return runStatus({ api: api.chosenApi });
+    case "stop":
+      return runStop();
+  }
 }
 
 main()
