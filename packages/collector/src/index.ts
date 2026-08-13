@@ -5,7 +5,8 @@ import { formatSchemaDump, probeSchema } from "./probe.ts";
 import { computeMetrics } from "./metrics.ts";
 import { replay } from "./replay.ts";
 import { renderCard } from "./render.ts";
-import { dryRun, publish } from "./publish.ts";
+import { credentialsPath, dryRun, publish, readCredentials } from "./publish.ts";
+import { weekWindowFor } from "@ao-wrapped/shared";
 
 const USAGE = `
 ao-wrapped — what your AI workforce actually accomplished
@@ -17,8 +18,8 @@ ao-wrapped — what your AI workforce actually accomplished
 
 Options
   --handle <name>               your GitHub handle
-  --from <YYYY-MM-DD>           window start (default: 30 days ago)
-  --to <YYYY-MM-DD>             window end (default: today)
+  --from <YYYY-MM-DD>           window start (default: Monday of this week)
+  --to <YYYY-MM-DD>             window end (default: Sunday of this week)
   --db <path>                   override the AO telemetry location
   --api <url>                   board API base URL
 
@@ -41,10 +42,30 @@ const { values } = parseArgs({
   allowPositionals: false,
 });
 
-function daysAgo(n: number): Date {
-  const d = new Date();
-  d.setUTCDate(d.getUTCDate() - n);
-  return d;
+/**
+ * The board runs in weekly seasons and rejects a payload spanning more than one,
+ * so the default window is this week rather than a rolling month. A default that
+ * cannot be published is not a default.
+ */
+function defaultWindow(): { from: Date; to: Date } {
+  const week = weekWindowFor(new Date());
+  return {
+    from: new Date(`${week.from}T00:00:00.000Z`),
+    to: new Date(`${week.to}T23:59:59.999Z`),
+  };
+}
+
+/**
+ * A card printed for "anonymous" and then published under the token's real
+ * handle is confusing, and the card is the thing people screenshot. Prefer the
+ * handle this machine already claimed.
+ */
+function defaultHandle(apiBase: string): string {
+  try {
+    return readCredentials(credentialsPath()).boards[apiBase]?.handle ?? "anonymous";
+  } catch {
+    return "anonymous";
+  }
 }
 
 async function main(): Promise<number> {
@@ -52,6 +73,9 @@ async function main(): Promise<number> {
     process.stdout.write(USAGE);
     return 0;
   }
+
+  const apiBase = values.api ?? process.env.AO_WRAPPED_API ?? "https://ao-wrapped.vercel.app";
+  const fallbackWindow = defaultWindow();
 
   const { db } = openAoDatabase(values.db ?? resolveDbPath());
   const probe = probeSchema(db);
@@ -64,10 +88,10 @@ async function main(): Promise<number> {
   const payload = computeMetrics({
     probe,
     transitions: replay(db),
-    handle: values.handle ?? "anonymous",
+    handle: values.handle ?? defaultHandle(apiBase),
     window: {
-      from: values.from ? new Date(values.from) : daysAgo(30),
-      to: values.to ? new Date(values.to) : new Date(),
+      from: values.from ? new Date(values.from) : fallbackWindow.from,
+      to: values.to ? new Date(values.to) : fallbackWindow.to,
     },
   });
 
@@ -79,7 +103,7 @@ async function main(): Promise<number> {
   process.stdout.write(renderCard(payload) + "\n");
 
   if (values.publish) {
-    const url = await publish(payload, values.api ?? process.env.AO_WRAPPED_API ?? "");
+    const url = await publish(payload, apiBase);
     process.stdout.write(`\nPublished: ${url}\n`);
   }
 
