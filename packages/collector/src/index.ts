@@ -1,4 +1,20 @@
 #!/usr/bin/env node
+/**
+ * Node prints an ExperimentalWarning for `node:sqlite` on first use. It lands in
+ * the middle of the card and, to someone deciding whether to trust a CLI reading
+ * their machine, "experimental" reads as "unfinished" — when the experimental
+ * thing is Node's API surface, not our use of it, which is a read-only open.
+ *
+ * Only that one warning is swallowed. Anything else Node has to say still gets
+ * through, because silencing the channel wholesale is how real warnings go
+ * unnoticed.
+ */
+process.on("warning", (warning) => {
+  const isSqliteExperiment =
+    warning.name === "ExperimentalWarning" && /SQLite/i.test(warning.message);
+  if (!isSqliteExperiment) console.warn(`${warning.name}: ${warning.message}`);
+});
+
 import { parseArgs } from "node:util";
 import { openAoDatabase, resolveDbPath } from "./db.ts";
 import { formatSchemaDump, probeSchema } from "./probe.ts";
